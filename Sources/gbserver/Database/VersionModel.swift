@@ -1,5 +1,5 @@
 //
-//  VersionEntry.swift
+//  VersionModel.swift
 //  
 //
 //  Created by Michael Brandt on 8/1/22.
@@ -7,7 +7,7 @@
 
 import SQLite
 
-struct VersionEntry: DatabaseFetchable {
+struct VersionModel: DatabaseFetchable {
     let id: Int64
     let build: Int64
     let versionName: String
@@ -19,11 +19,11 @@ struct VersionEntry: DatabaseFetchable {
     static let versionName = Expression<String>("versionName")
     static let type = Expression<Int64>("type")
     
-    static func fetch(queryBuilder: QueryBuilder<VersionEntry>, db: Connection) throws -> [VersionEntry] {
+    static func fetch(queryBuilder: QueryBuilder<VersionModel>, db: Connection) throws -> [VersionModel] {
         let query = queryBuilder.query
         let rowIterator = try db.prepareRowIterator(query)
-        let entries: [VersionEntry] = try rowIterator.map({ element in
-            let entry = VersionEntry(id: element[id], build: element[build], versionName: element[versionName], type: try _type(element[type]))
+        let entries: [VersionModel] = try rowIterator.map({ element in
+            let entry = VersionModel(id: element[id], build: element[build], versionName: element[versionName], type: try _type(element[type]))
             return entry
         })
         return entries

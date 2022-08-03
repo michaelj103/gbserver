@@ -1,22 +1,11 @@
 //
-//  ServerJSONCommand.swift
+//  File.swift
 //  
 //
-//  Created by Michael Brandt on 8/2/22.
+//  Created by Michael Brandt on 8/3/22.
 //
 
-import NIOCore
 import Foundation
-import SQLite
-
-struct ServerCommandContext {
-    let eventLoop: EventLoop
-    let db: DatabaseManager
-}
-
-protocol ServerJSONCommand: JSONCommand {
-    func run(context: ServerCommandContext) throws -> EventLoopFuture<Data>
-}
 
 struct CurrentVersionCommand: ServerJSONCommand {
     let requestedType: VersionType?
@@ -27,8 +16,8 @@ struct CurrentVersionCommand: ServerJSONCommand {
     
     func run(context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         let type = _requestedType()
-        let query = QueryBuilder<VersionEntry> { table in
-            return table.filter(VersionEntry.type == type.rawValue)
+        let query = QueryBuilder<VersionModel> { table in
+            return table.filter(VersionModel.type == type.rawValue)
         }
         let future = context.db.runFetch(eventLoop: context.eventLoop, queryBuilder: query)
         
@@ -49,7 +38,7 @@ struct CurrentVersionCommand: ServerJSONCommand {
         return dataPromise.futureResult
     }
     
-    func _makeResponseData(_ entries: [VersionEntry]) throws -> Data {
+    func _makeResponseData(_ entries: [VersionModel]) throws -> Data {
         let type = _requestedType()
         guard let versionInfo = entries.first else {
             throw RuntimeError("No version found for type \(type)")
@@ -69,7 +58,7 @@ struct CurrentVersionCommand: ServerJSONCommand {
         let versionName: String
         let type: VersionType
         
-        init(_ version: VersionEntry) {
+        init(_ version: VersionModel) {
             build = version.build
             versionName = version.versionName
             type = version.type
