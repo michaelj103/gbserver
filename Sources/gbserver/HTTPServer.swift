@@ -103,7 +103,12 @@ struct HTTPServer: ParsableCommand {
 #if os(macOS)
         Darwin.unlink(path)
 #elseif os(Linux)
-        Glibc.unlink(path)
+        print("Unlink linux")
+        if Glibc.unlink(path) == 0 {
+            print("Linux unlink success")
+        } else {
+            perror("Linux unlink failure:")
+        }
 #endif
         
         // Set up server with configuration options
