@@ -79,12 +79,15 @@ struct HTTPServer: ParsableCommand {
         print("Setting up database...", terminator: "")
         do {
             try database.performInitialSetup()
+            
             //TODO: Remove
-            try database.insertTestVersion()
+            let insertion = VersionModel.VersionInsertion(build: 3, versionName: "v0.8.1", type: .current)
+            try database.insertOnAccessQueue(VersionModel.self, insertion: insertion)
         } catch {
             print("Failed")
             throw error
         }
+        
         print("Complete")
         return database
     }
