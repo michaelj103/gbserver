@@ -19,9 +19,16 @@ protocol ServerJSONCommand: JSONCommand {
 }
 
 struct CurrentVersionCommand: ServerJSONCommand {
+    let requestedType: VersionType?
+    
+    private func _requestedType() -> VersionType {
+        return requestedType ?? .current
+    }
+    
     func run(context: ServerCommandContext) throws -> EventLoopFuture<Data> {
+        let type = _requestedType()
         let query = QueryBuilder<VersionEntry> { table in
-            return table.filter(VersionEntry.type == VersionType.current.rawValue)
+            return table.filter(VersionEntry.type == type.rawValue)
         }
         let future = context.db.runFetch(eventLoop: context.eventLoop, queryBuilder: query)
         
@@ -43,14 +50,29 @@ struct CurrentVersionCommand: ServerJSONCommand {
     }
     
     func _makeResponseData(_ entries: [VersionEntry]) throws -> Data {
+        let type = _requestedType()
         guard let versionInfo = entries.first else {
-            throw RuntimeError("No current version found")
+            throw RuntimeError("No version found for type \(type)")
         }
-        guard entries.count == 1 else {
-            throw RuntimeError("Multiple current versions found")
+        guard entries.count == 1 || type == .legacy else {
+            // It's a server configuration error to have multiple staging or current versions
+            throw RuntimeError("Multiple versions found for type \(type)")
         }
         
-        let data = try JSONEncoder().encode(versionInfo)
+        let response = CurrentVersionResponse(versionInfo)
+        let data = try JSONEncoder().encode(response)
         return data
+    }
+    
+    private struct CurrentVersionResponse : Encodable {
+        let build: Int64
+        let versionName: String
+        let type: VersionType
+        
+        init(_ version: VersionEntry) {
+            build = version.build
+            versionName = version.versionName
+            type = version.type
+        }
     }
 }

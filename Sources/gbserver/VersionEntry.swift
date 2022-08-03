@@ -7,15 +7,11 @@
 
 import SQLite
 
-struct VersionEntry: DatabaseFetchable, Encodable {
+struct VersionEntry: DatabaseFetchable {
     let id: Int64
     let build: Int64
     let versionName: String
     let type: VersionType
-    
-    private enum CodingKeys: String, CodingKey {
-        case build, versionName
-    }
     
     static let table = Table("Versions")
     static let id = Expression<Int64>("id")
@@ -41,8 +37,19 @@ struct VersionEntry: DatabaseFetchable, Encodable {
     }
 }
 
-enum VersionType: Int64, Encodable {
+enum VersionType: Int64, Codable, CustomStringConvertible {
     case legacy = 0
     case current = 1
     case staging = 2
+    
+    var description: String {
+        switch self {
+        case .legacy:
+            return "legacy"
+        case .current:
+            return "current"
+        case .staging:
+            return "staging"
+        }
+    }
 }
