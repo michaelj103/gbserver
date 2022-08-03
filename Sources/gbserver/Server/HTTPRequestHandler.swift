@@ -12,7 +12,7 @@ import Foundation
 
 import Dispatch
 
-internal final class HTTPRequestHandler: ChannelInboundHandler {
+final class HTTPRequestHandler: ChannelInboundHandler {
     typealias InboundIn = HTTPServerRequestPart
     typealias OutboundOut = HTTPServerResponsePart
     

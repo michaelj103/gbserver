@@ -25,17 +25,29 @@ struct HTTPServer: ParsableCommand {
         
     mutating func run() throws {
         let database = try _setupDatabase()
-        
         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        let serverCloseFuture = try _setupHTTPServer(threadGroup: group, database: database)
+        let xpcCloseFuture = try _setupXPCServer(threadGroup: group, database: database)
         
+        // When the server channels close, try to shut down gracefully. Doesn't matter if we crash since
+        // we're exiting anyway. This won't ever actually happen since we currently have no exit conditions
+        serverCloseFuture.and(xpcCloseFuture).whenComplete { _ in
+            try! group.syncShutdownGracefully()
+        }
+        
+        // Start the main queue event loop
+        Dispatch.dispatchMain()
+    }
+    
+    private func _setupHTTPServer(threadGroup: MultiThreadedEventLoopGroup, database: DatabaseManager) throws -> EventLoopFuture<Void> {
         // Set up server with configuration options
-        let socketBootstrap = ServerBootstrap(group: group)
+        let socketBootstrap = ServerBootstrap(group: threadGroup)
             // Specify backlog and enable SO_REUSEADDR for the server itself
             .serverChannelOption(ChannelOptions.backlog, value: 256)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
             // Set the handlers that are applied to the accepted Channels
-            .childChannelInitializer({ HTTPServer._childChannelInitializer($0, database: database) })
+            .childChannelInitializer({ HTTPServer._childHTTPChannelInitializer($0, database: database) })
 
             // Enable SO_REUSEADDR for the accepted Channels
             .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -45,22 +57,15 @@ struct HTTPServer: ParsableCommand {
         let channel = try socketBootstrap.bind(host: host, port: port).wait()
         
         guard let localAddress = channel.localAddress else {
-            throw RuntimeError("Unable to bind address for listening")
+            throw RuntimeError("Unable to bind address for listening (HTTP)")
         }
         
-        print("Server started and listening on \"\(host)\" port \(port). Resolved to \"\(localAddress)\"")
+        print("HTTP server started and listening on \"\(host)\" port \(port). Resolved to \"\(localAddress)\"")
         
-        // When the server channel closes, try to shut down gracefully. Doesn't matter if we crash since
-        // we're exiting anyway. This won't ever actually happen since we have no exit conditions
-        channel.closeFuture.whenComplete { _ in
-            try! group.syncShutdownGracefully()
-        }
-        
-        // Start the main queue event loop
-        Dispatch.dispatchMain()
+        return channel.closeFuture
     }
     
-    private static func _childChannelInitializer(_ channel: Channel, database: DatabaseManager) -> EventLoopFuture<Void> {
+    private static func _childHTTPChannelInitializer(_ channel: Channel, database: DatabaseManager) -> EventLoopFuture<Void> {
         return channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
             channel.pipeline.addHandler(HTTPRequestHandler(database))
         }
@@ -90,5 +95,39 @@ struct HTTPServer: ParsableCommand {
         
         print("Complete")
         return database
+    }
+    
+    private func _setupXPCServer(threadGroup: MultiThreadedEventLoopGroup, database: DatabaseManager) throws -> EventLoopFuture<Void> {
+        let path = "/tmp/foo"
+        // Need to unlink on macOS or else you'll get an EADDRINUSE
+//        Darwin.unlink(path)
+        
+        // Set up server with configuration options
+        let socketBootstrap = ServerBootstrap(group: threadGroup)
+            // Specify backlog and enable SO_REUSEADDR for the server itself
+            .serverChannelOption(ChannelOptions.backlog, value: 256)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+
+            // Set the handlers that are applied to the accepted Channels
+            .childChannelInitializer({ HTTPServer._childXPCChannelInitializer($0, database: database) })
+
+            // Enable SO_REUSEADDR for the accepted Channels
+            .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+        
+        let channel = try socketBootstrap.bind(unixDomainSocketPath: path).wait()
+        
+        guard let localAddress = channel.localAddress else {
+            throw RuntimeError("Unable to bind address for listening (XPC)")
+        }
+        
+        print("XPC server started and listening on \"\(localAddress)")
+        
+        return channel.closeFuture
+    }
+    
+    private static func _childXPCChannelInitializer(_ channel: Channel, database: DatabaseManager) -> EventLoopFuture<Void> {
+        channel.pipeline.addHandler(XPCRequestHandler())
     }
 }
