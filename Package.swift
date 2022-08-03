@@ -19,6 +19,7 @@ let package = Package(
             name: "gbserver",
             dependencies: [.product(name: "NIO", package: "swift-nio"),
                            .product(name: "NIOHTTP1", package: "swift-nio"),
+                           .product(name: "NIOFoundationCompat", package: "swift-nio"),
                            .product(name: "SQLite", package: "sqlite.swift"),
                            .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]),

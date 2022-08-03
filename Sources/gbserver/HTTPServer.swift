@@ -20,7 +20,12 @@ struct HTTPServer: ParsableCommand {
     @Option(name: .shortAndLong, help: "Port to listen on. Defaults to 8080")
     var port: Int = 8080
     
+    @Option(name: .shortAndLong, help: "Path to a sqlite3 database. Defaults to nil (in memory)")
+    var databasePath: String?
+        
     mutating func run() throws {
+        let database = try _setupDatabase()
+        
         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         
         // Set up server with configuration options
@@ -30,7 +35,7 @@ struct HTTPServer: ParsableCommand {
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
             // Set the handlers that are applied to the accepted Channels
-            .childChannelInitializer(HTTPServer._childChannelInitializer(channel:))
+            .childChannelInitializer({ HTTPServer._childChannelInitializer($0, database: database) })
 
             // Enable SO_REUSEADDR for the accepted Channels
             .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -43,7 +48,7 @@ struct HTTPServer: ParsableCommand {
             throw RuntimeError("Unable to bind address for listening")
         }
         
-        print("Server started and listening on \"\(host)\" (resolved to \"\(localAddress)\"), port \(port)")
+        print("Server started and listening on \"\(host)\" port \(port). Resolved to \"\(localAddress)\"")
         
         // When the server channel closes, try to shut down gracefully. Doesn't matter if we crash since
         // we're exiting anyway. This won't ever actually happen since we have no exit conditions
@@ -55,9 +60,32 @@ struct HTTPServer: ParsableCommand {
         Dispatch.dispatchMain()
     }
     
-    private static func _childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
+    private static func _childChannelInitializer(_ channel: Channel, database: DatabaseManager) -> EventLoopFuture<Void> {
         return channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
-            channel.pipeline.addHandler(HTTPRequestHandler())
+            channel.pipeline.addHandler(HTTPRequestHandler(database))
         }
+    }
+    
+    private func _setupDatabase() throws -> DatabaseManager {
+        // Open and set up db
+        let database: DatabaseManager
+        if let databasePath = databasePath {
+            print("Opening database at \(databasePath)")
+            database = try DatabaseManager(databasePath)
+        } else {
+            print("Opening in-memory database")
+            database = try DatabaseManager()
+        }
+        print("Setting up database...", terminator: "")
+        do {
+            try database.performInitialSetup()
+            //TODO: Remove
+            try database.insertTestVersion()
+        } catch {
+            print("Failed")
+            throw error
+        }
+        print("Complete")
+        return database
     }
 }

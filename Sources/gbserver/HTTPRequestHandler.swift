@@ -7,6 +7,8 @@
 
 import NIOCore
 import NIOHTTP1
+import NIOFoundationCompat
+import Foundation
 
 import Dispatch
 
@@ -16,43 +18,34 @@ internal final class HTTPRequestHandler: ChannelInboundHandler {
     
     private var buffer: ByteBuffer!
     private var defaultHeaders: HTTPHeaders!
-    private let defaultResponse = "Hello There\r\n"
-    private let notFoundResponse = "404 Not Found\r\n"
+    
+    // current request state
+    private var requestHeader: HTTPRequestHead?
+    private var hasProcessed = false
+    
+    private let database: DatabaseManager
+    private let commandCenter = JSONCommandCenter() //TODO: inject
+    init(_ db: DatabaseManager) {
+        database = db
+        commandCenter.registerCommand(name: "currentVersionInfo", type: CurrentVersionCommand.self)
+    }
+    
+    // MARK: ChannelInboundHandler Lifecycle
     
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let reqPart = self.unwrapInboundIn(data)
         
         switch reqPart {
-        case .head(let requestHeader):
-            if !requestHeader.uri.hasPrefix("/api") {
-                var responseHead = HTTPResponseHead(version: requestHeader.version, status: .notFound, headers: defaultHeaders)
-                responseHead.headers.add(name: "Content-Type", value: "text/plain; charset=UTF-8")
-                self.buffer.clear()
-                self.buffer.writeString(self.notFoundResponse)
-                responseHead.headers.add(name: "Content-Type", value: "text/plain; charset=UTF-8")
-                responseHead.headers.add(name: "Content-Length", value: "\(self.buffer!.readableBytes)")
-                let response = HTTPServerResponsePart.head(responseHead)
-                context.write(self.wrapOutboundOut(response), promise: nil)
-            } else {
-                var responseHead = HTTPResponseHead(version: requestHeader.version, status: .ok, headers: defaultHeaders)
-                self.buffer.clear()
-                self.buffer.writeString(self.defaultResponse)
-                responseHead.headers.add(name: "Content-Type", value: "text/plain; charset=UTF-8")
-                responseHead.headers.add(name: "Content-Length", value: "\(self.buffer!.readableBytes)")
-                let response = HTTPServerResponsePart.head(responseHead)
-                context.write(self.wrapOutboundOut(response), promise: nil)
-            }
-        case .body(_):
-            print("Read body")
+        case .head(let header):
+            requestHeader = header
+        case .body(let requestBody):
+            _processRequest(context: context, requestBody: requestBody)
         case .end(_):
-            let content = HTTPServerResponsePart.body(.byteBuffer(buffer!.slice()))
-            context.write(self.wrapOutboundOut(content), promise: nil)
-            self._completeResponse(context, trailers: nil, promise: nil)
+            _processRequest(context: context, requestBody: nil)
         }
     }
     
     func channelReadComplete(context: ChannelHandlerContext) {
-        print("Channel read complete")
         context.flush()
     }
     
@@ -63,12 +56,101 @@ internal final class HTTPRequestHandler: ChannelInboundHandler {
         defaultHeaders.add(name: "Connection", value: "close")
     }
     
-    private func _completeResponse(_ context: ChannelHandlerContext, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
+    // MARK: Internal response handling
+    
+    private func _processRequest(context: ChannelHandlerContext, requestBody: ByteBuffer?) {
+        guard !hasProcessed else {
+            return
+        }
+        guard let requestHeader = requestHeader else {
+            print("Somehow reached the processing phase without a header")
+            _sendEmptyStatus(context: context, status: .internalServerError)
+            return
+        }
+        // Use Foundation's URL for parsing
+        guard let url = URL(string: requestHeader.uri) else {
+            print("Unable to parse as URL \(requestHeader.uri)")
+            _sendEmptyStatus(context: context, status: .internalServerError)
+            return
+        }
+        hasProcessed = true
         
+        let apiPrefix = "/api/"
+        let relativePath = url.relativePath
+        if !relativePath.hasPrefix(apiPrefix) {
+            _sendEmptyStatus(context: context, status: .notFound)
+        } else {
+            let commandString = String(relativePath.dropFirst(apiPrefix.count))
+            let bodyData: Data = requestBody.map { Data(buffer: $0, byteTransferStrategy: .noCopy) } ?? "{}".data(using: .utf8)!
+            do {
+                let command = try commandCenter.decodeCommand(commandString, data: bodyData)
+                if let serverCommand = command as? ServerJSONCommand {
+                    _runCommand(context: context, command: serverCommand)
+                } else {
+                    // I hate this cast but I went around in circles with Swift generics, protocols and the JSON decoder
+                    _sendEmptyStatus(context: context, status: .internalServerError)
+                }
+            } catch JSONCommandError.unrecognizedCommand {
+                print("Unrecognized command \(commandString)")
+                _sendEmptyStatus(context: context, status: .badRequest)
+            } catch JSONCommandError.decodeError(let underlyingError) {
+                print("Command decode error \(underlyingError)")
+                _sendEmptyStatus(context: context, status: .badRequest)
+            } catch {
+                // Not sure what could have happened, send server error
+                print("Unknown error while decoding command")
+                _sendEmptyStatus(context: context, status: .internalServerError)
+            }
+        }
+    }
+    
+    private func _runCommand(context: ChannelHandlerContext, command: ServerJSONCommand) {
+        let commandContext = ServerCommandContext(eventLoop: context.eventLoop, db: database)
+        do {
+            let responseFuture = try command.run(context: commandContext)
+            responseFuture.whenSuccess { data in
+                self._sendResponseJSONData(context: context, data)
+            }
+            responseFuture.whenFailure { error in
+                print("Encountered error running command: \(error)")
+                self._sendEmptyStatus(context: context, status: .internalServerError)
+            }
+        } catch {
+            _sendEmptyStatus(context: context, status: .internalServerError)
+        }
+    }
+    
+    private func _sendResponseJSONData(context: ChannelHandlerContext, _ data: Data) {
+        var responseHead = HTTPResponseHead(version: .http1_1, status: .ok, headers: defaultHeaders)
+        responseHead.headers.add(name: "Content-Type", value: "application/json; charset=UTF-8")
+        self.buffer.clear()
+        self.buffer.writeData(data)
+        let header = HTTPServerResponsePart.head(responseHead)
+        context.write(self.wrapOutboundOut(header), promise: nil)
+        let body = HTTPServerResponsePart.body(.byteBuffer(buffer!.slice()))
+        context.write(self.wrapOutboundOut(body), promise: nil)
+        _completeResponse(context, trailers: nil, promise: nil)
+    }
+    
+    private func _sendEmptyStatus(context: ChannelHandlerContext, status: HTTPResponseStatus) {
+        var responseHead = HTTPResponseHead(version: .http1_1, status: .notFound, headers: defaultHeaders)
+        self.buffer.clear()
+        let message = "\(status.code) \(status.reasonPhrase)"
+        self.buffer.writeString(message)
+        responseHead.headers.add(name: "Content-Type", value: "text/plain; charset=UTF-8")
+        responseHead.headers.add(name: "Content-Length", value: "\(self.buffer!.readableBytes)")
+        
+        let header = HTTPServerResponsePart.head(responseHead)
+        context.write(self.wrapOutboundOut(header), promise: nil)
+        let body = HTTPServerResponsePart.body(.byteBuffer(buffer!.slice()))
+        context.write(self.wrapOutboundOut(body), promise: nil)
+        _completeResponse(context, trailers: nil, promise: nil)
+    }
+    
+    private func _completeResponse(_ context: ChannelHandlerContext, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
         let writeAndFlushPromise: EventLoopPromise<Void> = context.eventLoop.makePromise()
         writeAndFlushPromise.futureResult.cascade(to: promise)
         writeAndFlushPromise.futureResult.whenComplete { _ in
-            print("Closing")
             context.close(promise: nil)
         }
         
