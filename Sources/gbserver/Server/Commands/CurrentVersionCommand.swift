@@ -6,6 +6,8 @@
 //
 
 import Foundation
+import NIOCore
+import SQLite
 
 struct CurrentVersionCommand: ServerJSONCommand {
     let requestedType: VersionType?
