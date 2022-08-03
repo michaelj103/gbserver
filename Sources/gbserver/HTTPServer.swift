@@ -98,9 +98,9 @@ struct HTTPServer: ParsableCommand {
     }
     
     private func _setupXPCServer(threadGroup: MultiThreadedEventLoopGroup, database: DatabaseManager) throws -> EventLoopFuture<Void> {
-        let path = "/tmp/foo"
-        // Need to unlink on macOS or else you'll get an EADDRINUSE
-//        Darwin.unlink(path)
+        let path = "/tmp/com.mjb.gbserver"
+        // Need to unlink before binding or else you'll get an EADDRINUSE if we weren't shut down cleanly
+        Darwin.unlink(path)
         
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)
