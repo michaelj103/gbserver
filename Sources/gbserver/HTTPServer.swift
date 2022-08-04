@@ -132,6 +132,8 @@ struct HTTPServer: ParsableCommand {
     }
     
     private static func _childXPCChannelInitializer(_ channel: Channel, database: DatabaseManager) -> EventLoopFuture<Void> {
-        channel.pipeline.addHandler(XPCRequestHandler())
+        channel.pipeline.addHandler(ByteToMessageHandler(XPCMessageDecoder())).flatMap { _ in
+            channel.pipeline.addHandler(XPCRequestHandler())
+        }
     }
 }
