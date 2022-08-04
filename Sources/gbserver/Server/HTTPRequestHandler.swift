@@ -24,10 +24,10 @@ final class HTTPRequestHandler: ChannelInboundHandler {
     private var hasProcessed = false
     
     private let database: DatabaseManager
-    private let commandCenter = JSONCommandCenter() //TODO: inject
+    private let commandCenter = ServerJSONCommandCenter() //TODO: inject
     init(_ db: DatabaseManager) {
         database = db
-        commandCenter.registerCommand(name: "currentVersionInfo", type: CurrentVersionCommand.self)
+        commandCenter.registerCommand(CurrentVersionCommand())
     }
     
     // MARK: ChannelInboundHandler Lifecycle
@@ -81,42 +81,33 @@ final class HTTPRequestHandler: ChannelInboundHandler {
             _sendEmptyStatus(context: context, status: .notFound)
         } else {
             let commandString = String(relativePath.dropFirst(apiPrefix.count))
+            //TODO: replace this
             let bodyData: Data = requestBody.map { Data(buffer: $0, byteTransferStrategy: .noCopy) } ?? "{}".data(using: .utf8)!
             do {
-                let command = try commandCenter.decodeCommand(commandString, data: bodyData)
-                if let serverCommand = command as? ServerJSONCommand {
-                    _runCommand(context: context, command: serverCommand)
-                } else {
-                    // I hate this cast but I went around in circles with Swift generics, protocols and the JSON decoder
-                    _sendEmptyStatus(context: context, status: .internalServerError)
-                }
-            } catch JSONCommandError.unrecognizedCommand {
+                try _runCommand(context: context, commandName: commandString, data: bodyData)
+            } catch ServerJSONCommandError.unrecognizedCommand {
                 print("Unrecognized command \(commandString)")
                 _sendEmptyStatus(context: context, status: .badRequest)
-            } catch JSONCommandError.decodeError(let underlyingError) {
+            } catch ServerJSONCommandError.decodeError(let underlyingError) {
                 print("Command decode error \(underlyingError)")
                 _sendEmptyStatus(context: context, status: .badRequest)
             } catch {
-                // Not sure what could have happened, send server error
-                print("Unknown error while decoding command")
+                // Not sure what could have at this layer. Command should know (and have already logged)
+                print("Command-specific error occurred for \(commandString): \(error)")
                 _sendEmptyStatus(context: context, status: .internalServerError)
             }
         }
     }
     
-    private func _runCommand(context: ChannelHandlerContext, command: ServerJSONCommand) {
+    private func _runCommand(context: ChannelHandlerContext, commandName: String, data: Data) throws {
         let commandContext = ServerCommandContext(eventLoop: context.eventLoop, db: database)
-        do {
-            let responseFuture = try command.run(context: commandContext)
-            responseFuture.whenSuccess { data in
-                self._sendResponseJSONData(context: context, data)
-            }
-            responseFuture.whenFailure { error in
-                print("Encountered error running command: \(error)")
-                self._sendEmptyStatus(context: context, status: .internalServerError)
-            }
-        } catch {
-            _sendEmptyStatus(context: context, status: .internalServerError)
+        let responseFuture = try commandCenter.runCommand(commandName, data: data, context: commandContext)
+        responseFuture.whenSuccess { data in
+            self._sendResponseJSONData(context: context, data)
+        }
+        responseFuture.whenFailure { error in
+            print("Encountered error running command: \(error)")
+            self._sendEmptyStatus(context: context, status: .internalServerError)
         }
     }
     

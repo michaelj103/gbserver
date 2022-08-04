@@ -10,14 +10,16 @@ import NIOCore
 import SQLite
 
 struct CurrentVersionCommand: ServerJSONCommand {
-    let requestedType: VersionType?
+    let name = "currentVersionInfo"
     
-    private func _requestedType() -> VersionType {
-        return requestedType ?? .current
+    func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
+        let payload = try decodePayload(type: CurrentVersionCommandPayload.self, data: data, decoder: decoder)
+        let future = _run(with: payload, context: context)
+        return future
     }
     
-    func run(context: ServerCommandContext) throws -> EventLoopFuture<Data> {
-        let type = _requestedType()
+    private func _run(with payload: CurrentVersionCommandPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
+        let type = payload.reallyRequestedType()
         let query = QueryBuilder<VersionModel> { table in
             return table.filter(VersionModel.type == type.rawValue)
         }
@@ -28,7 +30,7 @@ struct CurrentVersionCommand: ServerJSONCommand {
             switch result {
             case .success(let versionEntries):
                 do {
-                    let data = try _makeResponseData(versionEntries)
+                    let data = try _makeResponseData(payload: payload, entries: versionEntries)
                     dataPromise.succeed(data)
                 } catch {
                     dataPromise.fail(error)
@@ -40,8 +42,8 @@ struct CurrentVersionCommand: ServerJSONCommand {
         return dataPromise.futureResult
     }
     
-    func _makeResponseData(_ entries: [VersionModel]) throws -> Data {
-        let type = _requestedType()
+    private func _makeResponseData(payload: CurrentVersionCommandPayload, entries: [VersionModel]) throws -> Data {
+        let type = payload.reallyRequestedType()
         guard let versionInfo = entries.first else {
             throw RuntimeError("No version found for type \(type)")
         }
@@ -65,5 +67,13 @@ struct CurrentVersionCommand: ServerJSONCommand {
             versionName = version.versionName
             type = version.type
         }
+    }
+}
+
+fileprivate struct CurrentVersionCommandPayload: Decodable {
+    let requestedType: VersionType?
+    
+    func reallyRequestedType() -> VersionType {
+        return requestedType ?? .current
     }
 }
