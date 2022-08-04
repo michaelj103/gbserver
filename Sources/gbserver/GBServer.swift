@@ -1,5 +1,5 @@
 //
-//  HTTPServer.swift
+//  GBServer.swift
 //  
 //
 //  Created by Michael Brandt on 7/31/22.
@@ -13,7 +13,7 @@ import Dispatch
 import ArgumentParser
 
 @main
-struct HTTPServer: ParsableCommand {
+struct GBServer: ParsableCommand {
     @Option(name: .shortAndLong, help: "Host to bind to for listening. Defaults to \"localhost\"")
     var host: String = "localhost"
     
@@ -51,7 +51,7 @@ struct HTTPServer: ParsableCommand {
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
             // Set the handlers that are applied to the accepted Channels
-            .childChannelInitializer({ HTTPServer._childHTTPChannelInitializer($0, database: database, commandCenter: commandCenter) })
+            .childChannelInitializer({ GBServer._childHTTPChannelInitializer($0, database: database, commandCenter: commandCenter) })
 
             // Enable SO_REUSEADDR for the accepted Channels
             .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -121,7 +121,7 @@ struct HTTPServer: ParsableCommand {
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
             // Set the handlers that are applied to the accepted Channels
-            .childChannelInitializer({ HTTPServer._childXPCChannelInitializer($0, database: database, commandCenter: commandCenter) })
+            .childChannelInitializer({ GBServer._childXPCChannelInitializer($0, database: database, commandCenter: commandCenter) })
 
             // Enable SO_REUSEADDR for the accepted Channels
             .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
