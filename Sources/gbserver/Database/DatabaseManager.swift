@@ -11,12 +11,14 @@ import Dispatch
 class DatabaseManager {
     private let db: Connection
     private let queue: DispatchQueue
+    private let transactionQueue: DispatchQueue
     private let usersTable = Table("Users")
     private let tables: [DatabaseTable.Type]
     
     init(_ location: Connection.Location) throws {
         db = try Connection(location)
         queue = DispatchQueue(label: "DatabaseQueue") // let it be unspecified QoS for now
+        transactionQueue = DispatchQueue(label: "TransactionQueue")
         tables = [VersionModel.self]
     }
     
@@ -35,8 +37,21 @@ class DatabaseManager {
         }
     }
     
-    // TODO: This actually needs to be locked
     private var isInTransaction = false
+    private func startTransaction() {
+        transactionQueue.sync {
+            precondition(!isInTransaction, "Nested transactions not supported")
+            isInTransaction = true
+        }
+    }
+    
+    private func endTransaction() {
+        transactionQueue.sync {
+            precondition(isInTransaction, "End transaction called when not in a transaction")
+            isInTransaction = false
+        }
+    }
+    
     func transactionSafeSyncOnAccessQueue(execute block: () throws -> Void) rethrows {
         if isInTransaction {
             try block()
@@ -205,10 +220,9 @@ extension DatabaseManager {
     func runTransaction<T>(_ transaction: DatabaseTransaction<T>, completion: @escaping (Swift.Result<T,Error>) -> Void) {
         let db = self.db
         self.queue.async {
-            self.isInTransaction = true
+            self.startTransaction()
             defer {
-                print("Completed transaction")
-                self.isInTransaction = false
+                self.endTransaction()
             }
             var result: T? = nil
             do {
