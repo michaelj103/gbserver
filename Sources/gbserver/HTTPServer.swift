@@ -112,6 +112,7 @@ struct HTTPServer: ParsableCommand {
         
         let commandCenter = ServerJSONCommandCenter()
         commandCenter.registerCommand(CurrentVersionCommand())
+        commandCenter.registerCommand(AddVersionCommand())
         
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)

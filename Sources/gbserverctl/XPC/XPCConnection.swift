@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  XPCConnection.swift
 //  
 //
 //  Created by Michael Brandt on 8/4/22.

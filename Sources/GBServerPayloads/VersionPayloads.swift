@@ -5,8 +5,6 @@
 //  Created by Michael Brandt on 8/3/22.
 //
 
-import Foundation
-
 public struct CurrentVersionHTTPRequestPayload: Codable {
     public let requestedType: VersionType?
     
@@ -29,6 +27,7 @@ public struct CurrentVersionHTTPResponsePayload : Codable {
 
 public typealias VersionXPCRequestPayload = CurrentVersionHTTPRequestPayload
 public typealias VersionXPCResponsePayload = CurrentVersionHTTPResponsePayload
+public typealias AddVersionXPCRequestPayload = CurrentVersionHTTPResponsePayload
 
 //TODO: can this really live here?
 public enum VersionType: Int64, Codable, CustomStringConvertible {

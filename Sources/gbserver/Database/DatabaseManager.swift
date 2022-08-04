@@ -29,9 +29,18 @@ class DatabaseManager {
     }
     
     func performInitialSetup() throws {
-        try _setupUsersTable()
+        try _setupUsersTable() //TODO: move this
         for table in tables {
             try table.createIfNecessary(db)
+        }
+    }
+    
+    private var isInTransaction = false
+    func transactionSafeSyncOnAccessQueue(execute block: () throws -> Void) rethrows {
+        if isInTransaction {
+            try block()
+        } else {
+            try queue.sync(execute: block)
         }
     }
     
@@ -97,7 +106,7 @@ extension DatabaseManager {
     func insertOnAccessQueue<T: DatabaseInsertable>(_ type: T.Type, insertion: T.InsertRecord) throws -> Int64 {
         let db = self.db
         var inserted: Int64 = 0
-        try queue.sync {
+        try transactionSafeSyncOnAccessQueue {
             inserted = try T.insert(db, record: insertion)
         }
         return inserted
@@ -114,7 +123,7 @@ protocol DatabaseUpdatable: DatabaseFetchable {
 
 extension DatabaseManager {
     /// Result is the number of updated rows
-    func updateOnAccessQueue<T: DatabaseUpdatable>(_ queryBuilder: QueryBuilder<T>, record: T.UpdateRecord, completion: @escaping (Swift.Result<Int,Error>) -> ()) {
+    func updateOnAccessQueue<T: DatabaseUpdatable>(_ queryBuilder: QueryBuilder<T>, record: T.UpdateRecord, completion: @escaping (Swift.Result<Int,Error>) -> Void) {
         let db = self.db
         queue.async {
             let result: Swift.Result<Int,Error>
@@ -127,6 +136,16 @@ extension DatabaseManager {
             completion(result)
         }
     }
+    
+    @discardableResult
+    func updateOnAccessQueue<T: DatabaseUpdatable>(_ queryBuilder: QueryBuilder<T>, record: T.UpdateRecord) throws -> Int {
+        let db = self.db
+        var updated: Int = 0
+        try transactionSafeSyncOnAccessQueue {
+            updated = try T.update(db, query: queryBuilder, record: record)
+        }
+        return updated
+    }
 }
 
 // MARK: - Fetching
@@ -137,7 +156,7 @@ protocol DatabaseFetchable {
 }
 
 extension DatabaseManager {
-    func fetchOnAccessQueue<T: DatabaseFetchable>(_ queryBuilder: QueryBuilder<T>, completion: @escaping (Swift.Result<[T],Error>) -> ()) {
+    func fetchOnAccessQueue<T: DatabaseFetchable>(_ queryBuilder: QueryBuilder<T>, completion: @escaping (Swift.Result<[T],Error>) -> Void) {
         let db = self.db
         queue.async {
             let result: Swift.Result<[T],Error>
@@ -148,6 +167,57 @@ extension DatabaseManager {
                 result = .failure(error)
             }
             completion(result)
+        }
+    }
+    
+    func fetchOnAccessQueue<T: DatabaseFetchable>(_ queryBuilder: QueryBuilder<T>) throws -> [T] {
+        let db = self.db
+        var fetched = [T]()
+        try transactionSafeSyncOnAccessQueue {
+            fetched = try T.fetch(db, queryBuilder: queryBuilder)
+        }
+        return fetched
+    }
+}
+
+// MARK: - Transactions
+
+struct DatabaseTransaction<T> {
+    private let block: (DatabaseManager) throws -> T
+    private let db: DatabaseManager
+    init(manager: DatabaseManager, _ block: @escaping (DatabaseManager) throws -> T) {
+        self.db = manager
+        self.block = block
+    }
+    
+    fileprivate func run() throws -> T {
+        return try block(db)
+    }
+}
+
+extension DatabaseManager {
+    func createTransaction<T>(block: @escaping (DatabaseManager) throws -> T) -> DatabaseTransaction<T> {
+        let transaction = DatabaseTransaction(manager: self, block)
+        return transaction
+    }
+        
+    func runTransaction<T>(_ transaction: DatabaseTransaction<T>, completion: @escaping (Swift.Result<T,Error>) -> Void) {
+        let db = self.db
+        self.queue.async {
+            self.isInTransaction = true
+            defer {
+                print("Completed transaction")
+                self.isInTransaction = false
+            }
+            var result: T? = nil
+            do {
+                try db.transaction {
+                    result = try transaction.run()
+                }
+                completion(.success(result!))
+            } catch {
+                completion(.failure(error))
+            }
         }
     }
 }
