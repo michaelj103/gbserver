@@ -35,6 +35,7 @@ class DatabaseManager {
         }
     }
     
+    // TODO: This actually needs to be locked
     private var isInTransaction = false
     func transactionSafeSyncOnAccessQueue(execute block: () throws -> Void) rethrows {
         if isInTransaction {
