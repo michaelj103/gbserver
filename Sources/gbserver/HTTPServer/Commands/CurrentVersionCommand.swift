@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  CurrentVersionCommand.swift
 //  
 //
 //  Created by Michael Brandt on 8/3/22.
@@ -8,17 +8,18 @@
 import Foundation
 import NIOCore
 import SQLite
+import GBServerPayloads
 
 struct CurrentVersionCommand: ServerJSONCommand {
     let name = "currentVersionInfo"
     
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
-        let payload = try decodePayload(type: CurrentVersionCommandPayload.self, data: data, decoder: decoder)
+        let payload = try decodePayload(type: CurrentVersionHTTPRequestPayload.self, data: data, decoder: decoder)
         let future = _run(with: payload, context: context)
         return future
     }
     
-    private func _run(with payload: CurrentVersionCommandPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
+    private func _run(with payload: CurrentVersionHTTPRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
         let type = payload.reallyRequestedType()
         let query = QueryBuilder<VersionModel> { table in
             return table.filter(VersionModel.type == type.rawValue)
@@ -42,7 +43,7 @@ struct CurrentVersionCommand: ServerJSONCommand {
         return dataPromise.futureResult
     }
     
-    private func _makeResponseData(payload: CurrentVersionCommandPayload, entries: [VersionModel]) throws -> Data {
+    private func _makeResponseData(payload: CurrentVersionHTTPRequestPayload, entries: [VersionModel]) throws -> Data {
         let type = payload.reallyRequestedType()
         guard let versionInfo = entries.first else {
             throw RuntimeError("No version found for type \(type)")
@@ -52,7 +53,7 @@ struct CurrentVersionCommand: ServerJSONCommand {
             throw RuntimeError("Multiple versions found for type \(type)")
         }
         
-        let response = CurrentVersionResponse(versionInfo)
+        let response = CurrentVersionHTTPResponsePayload(versionInfo)
         let data = try JSONEncoder().encode(response)
         return data
     }
@@ -70,10 +71,14 @@ struct CurrentVersionCommand: ServerJSONCommand {
     }
 }
 
-fileprivate struct CurrentVersionCommandPayload: Decodable {
-    let requestedType: VersionType?
-    
+fileprivate extension CurrentVersionHTTPRequestPayload {
     func reallyRequestedType() -> VersionType {
         return requestedType ?? .current
+    }
+}
+
+fileprivate extension CurrentVersionHTTPResponsePayload {
+    init(_ version: VersionModel) {
+        self.init(build: version.build, versionName: version.versionName, type: version.type)
     }
 }

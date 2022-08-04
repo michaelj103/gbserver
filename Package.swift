@@ -22,6 +22,7 @@ let package = Package(
                            .product(name: "NIOFoundationCompat", package: "swift-nio"),
                            .product(name: "SQLite", package: "sqlite.swift"),
                            .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                           "GBServerPayloads",
             ]
         ),
         .testTarget(
@@ -32,7 +33,9 @@ let package = Package(
             dependencies: [.product(name: "NIO", package: "swift-nio"),
                            .product(name: "NIOFoundationCompat", package: "swift-nio"),
                            .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                           "GBServerPayloads",
             ]
         ),
+        .target(name: "GBServerPayloads"),
     ]
 )

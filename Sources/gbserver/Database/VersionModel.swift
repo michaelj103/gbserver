@@ -6,6 +6,7 @@
 //
 
 import SQLite
+import GBServerPayloads
 
 struct VersionModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable, DatabaseUpdatable {
     let id: Int64
@@ -80,22 +81,5 @@ struct VersionModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable, Datab
         let update = updateTable.update(type <- record.type.rawValue)
         let updatedRows = try db.run(update)
         return updatedRows
-    }
-}
-
-enum VersionType: Int64, Codable, CustomStringConvertible {
-    case legacy = 0
-    case current = 1
-    case staging = 2
-    
-    var description: String {
-        switch self {
-        case .legacy:
-            return "legacy"
-        case .current:
-            return "current"
-        case .staging:
-            return "staging"
-        }
     }
 }
