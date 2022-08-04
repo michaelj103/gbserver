@@ -40,6 +40,10 @@ struct HTTPServer: ParsableCommand {
     }
     
     private func _setupHTTPServer(threadGroup: MultiThreadedEventLoopGroup, database: DatabaseManager) throws -> EventLoopFuture<Void> {
+        // First, configure the commands that the server responds to
+        let commandCenter = ServerJSONCommandCenter()
+        commandCenter.registerCommand(CurrentVersionCommand())
+        
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)
             // Specify backlog and enable SO_REUSEADDR for the server itself
@@ -47,7 +51,7 @@ struct HTTPServer: ParsableCommand {
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
             // Set the handlers that are applied to the accepted Channels
-            .childChannelInitializer({ HTTPServer._childHTTPChannelInitializer($0, database: database) })
+            .childChannelInitializer({ HTTPServer._childHTTPChannelInitializer($0, database: database, commandCenter: commandCenter) })
 
             // Enable SO_REUSEADDR for the accepted Channels
             .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -65,9 +69,9 @@ struct HTTPServer: ParsableCommand {
         return channel.closeFuture
     }
     
-    private static func _childHTTPChannelInitializer(_ channel: Channel, database: DatabaseManager) -> EventLoopFuture<Void> {
+    private static func _childHTTPChannelInitializer(_ channel: Channel, database: DatabaseManager, commandCenter: ServerJSONCommandCenter) -> EventLoopFuture<Void> {
         return channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
-            channel.pipeline.addHandler(HTTPRequestHandler(database))
+            channel.pipeline.addHandler(HTTPRequestHandler(database, commandCenter: commandCenter))
         }
     }
     
@@ -106,6 +110,9 @@ struct HTTPServer: ParsableCommand {
         Glibc.unlink(path)
 #endif
         
+        let commandCenter = ServerJSONCommandCenter()
+        commandCenter.registerCommand(CurrentVersionCommand())
+        
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)
             // Specify backlog and enable SO_REUSEADDR for the server itself
@@ -113,7 +120,7 @@ struct HTTPServer: ParsableCommand {
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
             // Set the handlers that are applied to the accepted Channels
-            .childChannelInitializer({ HTTPServer._childXPCChannelInitializer($0, database: database) })
+            .childChannelInitializer({ HTTPServer._childXPCChannelInitializer($0, database: database, commandCenter: commandCenter) })
 
             // Enable SO_REUSEADDR for the accepted Channels
             .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -131,9 +138,9 @@ struct HTTPServer: ParsableCommand {
         return channel.closeFuture
     }
     
-    private static func _childXPCChannelInitializer(_ channel: Channel, database: DatabaseManager) -> EventLoopFuture<Void> {
+    private static func _childXPCChannelInitializer(_ channel: Channel, database: DatabaseManager, commandCenter: ServerJSONCommandCenter) -> EventLoopFuture<Void> {
         channel.pipeline.addHandler(ByteToMessageHandler(XPCMessageDecoder())).flatMap { _ in
-            channel.pipeline.addHandler(XPCRequestHandler())
+            channel.pipeline.addHandler(XPCRequestHandler(database, commandCenter: commandCenter))
         }
     }
 }

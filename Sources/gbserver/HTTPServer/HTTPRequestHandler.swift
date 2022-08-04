@@ -24,10 +24,10 @@ final class HTTPRequestHandler: ChannelInboundHandler {
     private var hasProcessed = false
     
     private let database: DatabaseManager
-    private let commandCenter = ServerJSONCommandCenter() //TODO: inject
-    init(_ db: DatabaseManager) {
+    private let commandCenter: ServerJSONCommandCenter
+    init(_ db: DatabaseManager, commandCenter: ServerJSONCommandCenter) {
         database = db
-        commandCenter.registerCommand(CurrentVersionCommand())
+        self.commandCenter = commandCenter
     }
     
     // MARK: ChannelInboundHandler Lifecycle
@@ -81,19 +81,18 @@ final class HTTPRequestHandler: ChannelInboundHandler {
             _sendEmptyStatus(context: context, status: .notFound)
         } else {
             let commandString = String(relativePath.dropFirst(apiPrefix.count))
-            //TODO: replace this
-            let bodyData: Data = requestBody.map { Data(buffer: $0, byteTransferStrategy: .noCopy) } ?? "{}".data(using: .utf8)!
+            let bodyData: Data = requestBody != nil ? Data(buffer: requestBody!, byteTransferStrategy: .noCopy) : "{}".data(using: .utf8)!
             do {
                 try _runCommand(context: context, commandName: commandString, data: bodyData)
             } catch ServerJSONCommandError.unrecognizedCommand {
-                print("Unrecognized command \(commandString)")
+                print("Unrecognized command \"\(commandString)\"")
                 _sendEmptyStatus(context: context, status: .badRequest)
             } catch ServerJSONCommandError.decodeError(let underlyingError) {
                 print("Command decode error \(underlyingError)")
                 _sendEmptyStatus(context: context, status: .badRequest)
             } catch {
-                // Not sure what could have at this layer. Command should know (and have already logged)
-                print("Command-specific error occurred for \(commandString): \(error)")
+                // Not sure what could have gone wrong at this layer. Command should know (and have already logged)
+                print("Command-specific error occurred for \"\(commandString)\": \(error)")
                 _sendEmptyStatus(context: context, status: .internalServerError)
             }
         }
@@ -106,7 +105,7 @@ final class HTTPRequestHandler: ChannelInboundHandler {
             self._sendResponseJSONData(context: context, data)
         }
         responseFuture.whenFailure { error in
-            print("Encountered error running command: \(error)")
+            print("Command \"\(commandName)\" encountered an error: \(error)")
             self._sendEmptyStatus(context: context, status: .internalServerError)
         }
     }

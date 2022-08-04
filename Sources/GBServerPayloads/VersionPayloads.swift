@@ -9,6 +9,10 @@ import Foundation
 
 public struct CurrentVersionHTTPRequestPayload: Codable {
     public let requestedType: VersionType?
+    
+    public init(requestedType: VersionType?) {
+        self.requestedType = requestedType
+    }
 }
 
 public struct CurrentVersionHTTPResponsePayload : Codable {
@@ -23,8 +27,8 @@ public struct CurrentVersionHTTPResponsePayload : Codable {
     }
 }
 
-public typealias VersionXPCRequestPayload = CurrentVersionHTTPResponsePayload
-public typealias VersionXPCResponsePayload = CurrentVersionHTTPRequestPayload
+public typealias VersionXPCRequestPayload = CurrentVersionHTTPRequestPayload
+public typealias VersionXPCResponsePayload = CurrentVersionHTTPResponsePayload
 
 //TODO: can this really live here?
 public enum VersionType: Int64, Codable, CustomStringConvertible {

@@ -9,6 +9,7 @@ import NIOCore
 import NIOPosix
 import NIOFoundationCompat
 import Foundation
+import GBServerPayloads
 
 private final class PrintHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
@@ -56,16 +57,16 @@ let channel = try bootstrap.connect(unixDomainSocketPath: path).wait()
 
 print("Connected...")
 
-let jsonPacket = Dictionary<String, String>()
-let jsonData = try JSONEncoder().encode(jsonPacket)
+let commandName = "currentVersionInfo"
+let requestPayload = VersionXPCRequestPayload(requestedType: .current)
+let jsonData = try JSONEncoder().encode(requestPayload)
 var buffer = channel.allocator.buffer(string: "MSG")
-precondition(buffer.writeInteger(Int16(5)) == 2)
+precondition(buffer.writeInteger(Int16(commandName.count)) == 2)
 precondition(buffer.writeInteger(Int16(jsonData.count)) == 2)
-buffer.writeString("Hello")
+buffer.writeString(commandName)
 buffer.writeData(jsonData)
 try! channel.writeAndFlush(buffer.slice()).wait()
 
 try! channel.closeFuture.wait()
 
-
-print("Done?")
+print("Done")

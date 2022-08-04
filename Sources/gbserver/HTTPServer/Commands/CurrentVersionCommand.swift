@@ -45,15 +45,21 @@ struct CurrentVersionCommand: ServerJSONCommand {
     
     private func _makeResponseData(payload: CurrentVersionHTTPRequestPayload, entries: [VersionModel]) throws -> Data {
         let type = payload.reallyRequestedType()
-        guard let versionInfo = entries.first else {
-            throw RuntimeError("No version found for type \(type)")
+        guard let firstEntry = entries.first else {
+            let empty = [String]()
+            let data = try JSONEncoder().encode(empty)
+            return data
         }
-        guard entries.count == 1 || type == .legacy else {
-            // It's a server configuration error to have multiple staging or current versions
-            throw RuntimeError("Multiple versions found for type \(type)")
+        let response: [CurrentVersionHTTPResponsePayload]
+        if type == .legacy {
+            response = entries.map { CurrentVersionHTTPResponsePayload($0) }
+        } else {
+            if entries.count > 1 {
+                throw RuntimeError("Multiple versions found for type \(type)")
+            }
+            response = [CurrentVersionHTTPResponsePayload(firstEntry)]
         }
         
-        let response = CurrentVersionHTTPResponsePayload(versionInfo)
         let data = try JSONEncoder().encode(response)
         return data
     }
