@@ -8,7 +8,6 @@
 import NIOCore
 
 final class XPCMessageDecoder: ByteToMessageDecoder {
-    typealias InboundIn = ByteBuffer
     typealias InboundOut = XPCMessagePart
     
     private var decoderState = XPCMessageDecoderState.waitingForHeader
