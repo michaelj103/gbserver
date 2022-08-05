@@ -18,6 +18,11 @@ public struct ListUsersXPCRequestPayload: Codable {
         self.deviceID = nil
         self.name = name
     }
+    
+    public init() {
+        self.deviceID = nil
+        self.name = nil
+    }
 }
 
 public struct ListUsersXPCResponsePayload: Codable {
