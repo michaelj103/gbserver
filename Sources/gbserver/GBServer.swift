@@ -14,6 +14,8 @@ import ArgumentParser
 
 @main
 struct GBServer: ParsableCommand {
+    static var configuration = CommandConfiguration(commandName: "gbserver")
+    
     @Option(name: .shortAndLong, help: "Host to bind to for listening. Defaults to \"localhost\"")
     var host: String = "localhost"
     
