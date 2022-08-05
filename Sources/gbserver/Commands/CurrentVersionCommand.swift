@@ -63,18 +63,6 @@ struct CurrentVersionCommand: ServerJSONCommand {
         let data = try JSONEncoder().encode(response)
         return data
     }
-    
-    private struct CurrentVersionResponse : Encodable {
-        let build: Int64
-        let versionName: String
-        let type: VersionType
-        
-        init(_ version: VersionModel) {
-            build = version.build
-            versionName = version.versionName
-            type = version.type
-        }
-    }
 }
 
 fileprivate extension CurrentVersionHTTPRequestPayload {

@@ -69,6 +69,10 @@ struct QueryBuilder<T: DatabaseFetchable> {
     init(_ block: (Table) -> Table) {
         query = block(T.table)
     }
+    
+    init() {
+        query = T.table
+    }
 }
 
 // MARK: - Table Creation

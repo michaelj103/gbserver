@@ -5,8 +5,6 @@
 //  Created by Michael Brandt on 8/3/22.
 //
 
-import Foundation
-
 public struct CurrentVersionHTTPRequestPayload: Codable {
     public let requestedType: VersionType?
     
