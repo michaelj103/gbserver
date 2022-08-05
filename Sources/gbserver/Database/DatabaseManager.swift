@@ -12,26 +12,24 @@ class DatabaseManager {
     private let db: Connection
     private let queue: DispatchQueue
     private let transactionQueue: DispatchQueue
-    private let usersTable = Table("Users")
     private let tables: [DatabaseTable.Type]
     
-    init(_ location: Connection.Location) throws {
+    init(_ location: Connection.Location, tables: [DatabaseTable.Type]) throws {
         db = try Connection(location)
         queue = DispatchQueue(label: "DatabaseQueue") // let it be unspecified QoS for now
         transactionQueue = DispatchQueue(label: "TransactionQueue")
-        tables = [VersionModel.self]
+        self.tables = tables
     }
     
-    convenience init(_ path: String) throws {
-        try self.init(.uri(path))
+    convenience init(_ path: String, tables: [DatabaseTable.Type]) throws {
+        try self.init(.uri(path), tables: tables)
     }
     
-    convenience init() throws {
-        try self.init(.inMemory)
+    convenience init(tables: [DatabaseTable.Type]) throws {
+        try self.init(.inMemory, tables: tables)
     }
     
     func performInitialSetup() throws {
-        try _setupUsersTable() //TODO: move this
         for table in tables {
             try table.createIfNecessary(db)
         }
@@ -58,21 +56,6 @@ class DatabaseManager {
         } else {
             try queue.sync(execute: block)
         }
-    }
-    
-    private func _setupUsersTable() throws {
-        let users = usersTable
-        let id = Expression<Int64>("id")
-        let deviceID = Expression<String>("deviceID")
-        let name = Expression<String>("name")
-        
-        let userCreation = users.create(temporary: false, ifNotExists: true, withoutRowid: false) { builder in
-            builder.column(id, primaryKey: true)
-            builder.column(deviceID, unique: true)
-            builder.column(name)
-        }
-        
-        try db.run(userCreation)
     }
 }
 

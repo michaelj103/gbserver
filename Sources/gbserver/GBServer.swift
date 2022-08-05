@@ -77,21 +77,20 @@ struct GBServer: ParsableCommand {
     
     private func _setupDatabase() throws -> DatabaseManager {
         // Open and set up db
+        let tables: [DatabaseTable.Type] = [VersionModel.self,
+                                            UserModel.self,
+        ]
         let database: DatabaseManager
         if let databasePath = databasePath {
             print("Opening database at \(databasePath)")
-            database = try DatabaseManager(databasePath)
+            database = try DatabaseManager(databasePath, tables: tables)
         } else {
             print("Opening in-memory database")
-            database = try DatabaseManager()
+            database = try DatabaseManager(tables: tables)
         }
         print("Setting up database...", terminator: "")
         do {
             try database.performInitialSetup()
-            
-            //TODO: Remove
-            let insertion = VersionModel.VersionInsertion(build: 3, versionName: "v0.8.1", type: .current)
-            try database.insertOnAccessQueue(VersionModel.self, insertion: insertion)
         } catch {
             print("Failed")
             throw error
