@@ -8,6 +8,7 @@
 import Foundation
 import NIOCore
 import GBServerPayloads
+import SQLite
 
 struct ListUsersCommand: ServerJSONCommand {
     let name = "listUsers"
@@ -43,7 +44,8 @@ struct ListUsersCommand: ServerJSONCommand {
     }
     
     private func _fetchUsersWithName(_ name: String, context: ServerCommandContext) -> EventLoopFuture<[UserModel]> {
-        let queryBuilder = QueryBuilder<UserModel> { $0.filter(UserModel.name.like(name)) }
+        let nameExpression = Expression<String>("name")
+        let queryBuilder = QueryBuilder<UserModel> { $0.filter(nameExpression.like(name)) }
         let future = context.db.runFetch(eventLoop: context.eventLoop, queryBuilder: queryBuilder)
         return future
     }

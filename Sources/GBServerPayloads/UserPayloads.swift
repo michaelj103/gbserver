@@ -34,3 +34,13 @@ public struct ListUsersXPCResponsePayload: Codable {
         self.name = name
     }
 }
+
+public struct RegisterUserHTTPRequestPayload: Codable {
+    public let deviceID: String
+    public let name: String?
+    
+    public init(deviceID: String, name: String?) {
+        self.deviceID = deviceID
+        self.name = name
+    }
+}
