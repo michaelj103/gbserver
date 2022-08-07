@@ -15,7 +15,7 @@ extension GBServerCTL {
     struct UserCommand: ParsableCommand {
         static var configuration = CommandConfiguration(
             commandName: "user",
-            subcommands: [List.self]
+            subcommands: [List.self, Register.self]
         )
     }
 }
