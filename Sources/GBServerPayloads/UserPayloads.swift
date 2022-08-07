@@ -27,11 +27,11 @@ public struct ListUsersXPCRequestPayload: Codable {
 
 public struct ListUsersXPCResponsePayload: Codable {
     public let deviceID: String
-    public let name: String
+    public let displayName: String?
     
-    public init(deviceID: String, name: String) {
+    public init(deviceID: String, displayName: String?) {
         self.deviceID = deviceID
-        self.name = name
+        self.displayName = displayName
     }
 }
 

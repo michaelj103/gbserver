@@ -2,56 +2,38 @@
 //  UserModel.swift
 //  
 //
-//  Created by Michael Brandt on 8/4/22.
+//  Created by Michael Brandt on 8/7/22.
 //
 
-import GBServerPayloads
+import Foundation
+import GRDB
 
-struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable {
-    let id: Int64
+struct UserModel: Codable, DatabaseTable, FetchableRecord, MutablePersistableRecord {
+    private(set) var id: Int64?
     let deviceID: String
-    let name: String
+    let displayName: String?
     
-    static let table = Table("Users")
-    static let id = Expression<Int64>("id")
-    static let deviceID = Expression<String>("deviceID")
-    static let name = Expression<String>("name")
+    static let databaseTableName: String = "users"
     
-    static func createIfNecessary(_ db: Connection) throws {
-        let userCreation = table.create(temporary: false, ifNotExists: true, withoutRowid: false) { builder in
-            builder.column(id, primaryKey: true)
-            builder.column(deviceID, unique: true)
-            builder.column(name)
-        }
-
-        try db.run(userCreation)
-    }
+    private static let idColumnName = "id"
+    private static let deviceIDColumnName = "deviceID"
+    private static let displayNameColumnName = "displayName"
     
-    // MARK: - Fetching
+    static let deviceIDColumn = Column(deviceIDColumnName)
+    static let displayNameColumn = Column(displayNameColumnName)
     
-    static func fetch(_ db: Connection, queryBuilder: QueryBuilder<UserModel>) throws -> [UserModel] {
-        let query = queryBuilder.query
-        let rowIterator = try db.prepareRowIterator(query)
-        let entries: [UserModel] = try rowIterator.map({ element in
-            let entry = UserModel(id: element[id], deviceID: element[deviceID], name: element[name])
-            return entry
+    static func createTableIfNecessary(_ dbQueue: DatabaseQueue) throws {
+        try dbQueue.write({ db in
+            try db.create(table: databaseTableName, options: .ifNotExists, body: { tableDefinition in
+                tableDefinition.autoIncrementedPrimaryKey(idColumnName)
+                tableDefinition.column(deviceIDColumnName).notNull().unique()
+                tableDefinition.column(displayNameColumnName).unique()
+            })
         })
-        return entries
     }
     
-    // MARK: - Inserting
-    
-    typealias InsertRecord = UserInsertion
-    struct UserInsertion {
-        let deviceID: String
-        let name: String?
-    }
-    
-    static func insert(_ db: Connection, record: InsertRecord) throws -> Int64 {
-        let resolvedName = record.name ?? "Unknown Name"
-        let insertion = table.insert(deviceID <- record.deviceID, name <- resolvedName)
-        let insertedRowID = try db.run(insertion)
-        return insertedRowID
+    mutating func didInsert(with rowID: Int64, for column: String?) {
+        self.id = rowID
     }
 }
 
