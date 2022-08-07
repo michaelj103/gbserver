@@ -7,6 +7,7 @@
 
 import Foundation
 import NIOCore
+import NIOFoundationCompat
 
 protocol XPCRequest {
     associatedtype PayloadType: Encodable

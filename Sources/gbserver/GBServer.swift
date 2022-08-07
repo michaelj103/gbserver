@@ -45,6 +45,7 @@ struct GBServer: ParsableCommand {
         // First, configure the commands that the server responds to
         let commandCenter = ServerJSONCommandCenter()
         commandCenter.registerCommand(CurrentVersionCommand())
+        commandCenter.registerCommand(RegisterUserCommand())
         
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)
@@ -85,10 +86,10 @@ struct GBServer: ParsableCommand {
         let database: DatabaseManager
         if let databasePath = databasePath {
             print("Opening database at \(databasePath)")
-            database = try DatabaseManager(databasePath, tables: tables)
+            database = try DatabaseManager(.onDisk(databasePath), tables: tables)
         } else {
             print("Opening in-memory database")
-            database = try DatabaseManager(tables: tables)
+            database = try DatabaseManager(.inMemory, tables: tables)
         }
         print("Setting up database...", terminator: "")
         do {
@@ -114,6 +115,8 @@ struct GBServer: ParsableCommand {
         let commandCenter = ServerJSONCommandCenter()
         commandCenter.registerCommand(CurrentVersionCommand())
         commandCenter.registerCommand(AddVersionCommand())
+        commandCenter.registerCommand(ListUsersCommand())
+        commandCenter.registerCommand(RegisterUserCommand())
         
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)

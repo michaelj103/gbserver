@@ -7,8 +7,8 @@
 
 import Foundation
 import NIOCore
-import SQLite
 import GBServerPayloads
+import GRDB
 
 struct CurrentVersionCommand: ServerJSONCommand {
     let name = "currentVersionInfo"
@@ -21,59 +21,38 @@ struct CurrentVersionCommand: ServerJSONCommand {
     
     private func _run(with payload: CurrentVersionHTTPRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
         let type = payload.reallyRequestedType()
-        let query = QueryBuilder<VersionModel> { table in
-            return table.filter(VersionModel.type == type.rawValue)
+        let future = context.db.asyncRead(eventLoop: context.eventLoop) { db in
+            try VersionModel.filter(VersionModel.typeColumn == type.rawValue).fetchAll(db)
         }
-        let future = context.db.runFetch(eventLoop: context.eventLoop, queryBuilder: query)
         
-        let dataPromise = context.eventLoop.makePromise(of: Data.self)
-        future.whenComplete { result in
-            switch result {
-            case .success(let versionEntries):
-                do {
-                    let data = try _makeResponseData(payload: payload, entries: versionEntries)
-                    dataPromise.succeed(data)
-                } catch {
-                    dataPromise.fail(error)
-                }
-            case .failure(let error):
-                dataPromise.fail(error)
-            }
+        let dataFuture = future.flatMapThrowing { entries in
+            try _makeResponseData(payload: payload, entries: entries)
         }
-        return dataPromise.futureResult
+        return dataFuture
     }
     
     private func _makeResponseData(payload: CurrentVersionHTTPRequestPayload, entries: [VersionModel]) throws -> Data {
         let type = payload.reallyRequestedType()
         guard let firstEntry = entries.first else {
+            // make a valid empty response if actually empty
             let empty = [String]()
             let data = try JSONEncoder().encode(empty)
             return data
         }
         let response: [CurrentVersionHTTPResponsePayload]
-        if type == .legacy {
-            response = entries.map { CurrentVersionHTTPResponsePayload($0) }
-        } else {
+        if type.isSingletonType {
             if entries.count > 1 {
+                // Consider this a server-side error. Singleton types having 1 or 0 entries should be enforced server-side
                 throw RuntimeError("Multiple versions found for type \(type)")
             }
             response = [CurrentVersionHTTPResponsePayload(firstEntry)]
+        } else {
+            // multiple is ok. Encode all responses
+            response = entries.map { CurrentVersionHTTPResponsePayload($0) }
         }
         
         let data = try JSONEncoder().encode(response)
         return data
-    }
-    
-    private struct CurrentVersionResponse : Encodable {
-        let build: Int64
-        let versionName: String
-        let type: VersionType
-        
-        init(_ version: VersionModel) {
-            build = version.build
-            versionName = version.versionName
-            type = version.type
-        }
     }
 }
 

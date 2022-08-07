@@ -5,13 +5,15 @@
 //  Created by Michael Brandt on 8/3/22.
 //
 
-import Foundation
-
 public struct CurrentVersionHTTPRequestPayload: Codable {
     public let requestedType: VersionType?
     
+    public let clientInfo: ClientInfo
+    
     public init(requestedType: VersionType?) {
         self.requestedType = requestedType
+        
+        self.clientInfo = ClientInfo()
     }
 }
 
@@ -45,6 +47,17 @@ public enum VersionType: Int64, Codable, CustomStringConvertible {
             return "current"
         case .staging:
             return "staging"
+        }
+    }
+    
+    public var isSingletonType: Bool {
+        switch self {
+        case .legacy:
+            return false
+        case .current:
+            return true
+        case .staging:
+            return true
         }
     }
 }
