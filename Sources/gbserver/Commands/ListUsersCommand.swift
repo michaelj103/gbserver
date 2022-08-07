@@ -15,12 +15,12 @@ struct ListUsersCommand: ServerJSONCommand {
     
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         let payload = try decodePayload(type: ListUsersXPCRequestPayload.self, data: data, decoder: decoder)
-        if payload.name != nil && payload.deviceID != nil {
+        if payload.displayName != nil && payload.deviceID != nil {
             throw RuntimeError("Fetching on both name and device ID is prohibited")
         }
         
         let queryExpression: SQLSpecificExpressible?
-        if let name = payload.name {
+        if let name = payload.displayName {
             queryExpression = (UserModel.displayNameColumn.like(name))
         } else if let deviceID = payload.deviceID {
             queryExpression = (UserModel.deviceIDColumn.like(deviceID))

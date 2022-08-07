@@ -23,14 +23,14 @@ extension GBServerCTL {
 fileprivate extension GBServerCTL.UserCommand {
     struct List: ParsableCommand {
         
-        @Option(name: .shortAndLong, help: "The user name (or pattern) to filter on.")
-        var name: String?
+        @Option(name: [.customShort("n"), .long], help: "The user display name (or pattern) to filter on.")
+        var displayName: String?
         
         @Option(name: .shortAndLong, help: "The user deviceID (or pattern) to filter on.")
         var deviceID: String?
         
         func validate() throws {
-            if name != nil && deviceID != nil {
+            if displayName != nil && deviceID != nil {
                 throw CommandError("Only one of name or deviceID may be specified")
             }
         }
@@ -39,7 +39,7 @@ fileprivate extension GBServerCTL.UserCommand {
             let connectionManager = XPCConnectionManager()
             let connection = try connectionManager.makeConnection()
             
-            let request = ListXPCRequest(name: name, deviceID: deviceID)
+            let request = ListXPCRequest(displayName: displayName, deviceID: deviceID)
             try connection.sendRequest(request) { result in
                 switch result {
                 case .success(let data):
@@ -67,18 +67,66 @@ fileprivate extension GBServerCTL.UserCommand {
         }
         
         private struct ListXPCRequest: XPCRequest {
-            typealias PayloadType = ListUsersXPCRequestPayload
             let name = "listUsers"
             let payload: ListUsersXPCRequestPayload
             
-            init(name: String?, deviceID: String?) {
-                if let name = name {
-                    payload = ListUsersXPCRequestPayload(name: name)
+            init(displayName: String?, deviceID: String?) {
+                if let name = displayName {
+                    payload = ListUsersXPCRequestPayload(displayName: name)
                 } else if let deviceID = deviceID {
                     payload = ListUsersXPCRequestPayload(deviceID: deviceID)
                 } else {
                     payload = ListUsersXPCRequestPayload()
                 }
+            }
+        }
+    }
+}
+
+fileprivate extension GBServerCTL.UserCommand {
+    struct Register: ParsableCommand {
+        
+        @Option(name: [.customShort("n"), .long], help: "The user display name to register.")
+        var displayName: String?
+        
+        @Option(name: .shortAndLong, help: "The user deviceID to register.")
+        var deviceID: String
+        
+        mutating func run() throws {
+            let connectionManager = XPCConnectionManager()
+            let connection = try connectionManager.makeConnection()
+            
+            let request = RegisterRequest(deviceID: deviceID, displayName: displayName)
+            try connection.sendRequest(request) { result in
+                switch result {
+                case .success(let data):
+                    Register._printResult(data)
+                case .failure(let error):
+                    print("list failed with error: \(error)")
+                }
+            }
+        }
+        
+        static private func _printResult(_ data: Data) {
+            guard let result = try? JSONDecoder().decode(GenericMessageResponse.self, from: data) else {
+                print("Unable to decode response from server")
+                return
+            }
+            
+            switch result {
+            case .success(let message):
+                print("Received success with message: \(message)")
+            case .failure(let message):
+                print("Received failure with message: \(message)")
+            }
+        }
+        
+        private struct RegisterRequest: XPCRequest {
+            let name = "registerUser"
+            let payload: RegisterUserXPCRequestPayload
+            
+            init(deviceID: String, displayName: String?) {
+                payload = RegisterUserXPCRequestPayload(deviceID: deviceID, displayName: displayName)
             }
         }
     }

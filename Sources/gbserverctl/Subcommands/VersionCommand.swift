@@ -58,7 +58,6 @@ fileprivate extension GBServerCTL.VersionCommand {
         }
         
         private struct ListXPCRequest: XPCRequest {
-            typealias PayloadType = VersionXPCRequestPayload
             let name = "currentVersionInfo"
             let payload: VersionXPCRequestPayload
             
@@ -111,7 +110,6 @@ fileprivate extension GBServerCTL.VersionCommand {
         }
         
         private struct AddXPCRequest: XPCRequest {
-            typealias PayloadType = AddVersionXPCRequestPayload
             let name = "addVersionInfo"
             let payload: AddVersionXPCRequestPayload
             

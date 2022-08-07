@@ -38,7 +38,6 @@ struct AddVersionCommand: ServerJSONCommand {
         
         let dataFuture: EventLoopFuture<Data> = future.flatMapThrowing { _ in
             let genericResponse = GenericMessageResponse.success(message: "Successfully inserted legacy version \"\(payload.versionName)\"(\(payload.build))")
-//            let genericResponse = GenericSuccessResponse(message: "Successfully inserted legacy version \"\(payload.versionName)\"(\(payload.build))")
             let data = try JSONEncoder().encode(genericResponse)
             return data
         }
@@ -60,7 +59,6 @@ struct AddVersionCommand: ServerJSONCommand {
         
         let dataFuture: EventLoopFuture<Data> = future.flatMapThrowing { count in
             let genericResponse = GenericMessageResponse.success(message: "Successfully inserted \(targetVersionType) version \"\(payload.versionName)\"(\(payload.build)). Updated \(count) existing version\(count == 1 ? "" : "s") to legacy")
-//            let genericResponse = GenericSuccessResponse(message: "Successfully inserted \(targetVersionType) version \"\(payload.versionName)\"(\(payload.build)). Updated \(count) existing version\(count == 1 ? "" : "s") to legacy")
             let data = try JSONEncoder().encode(genericResponse)
             return data
         }
