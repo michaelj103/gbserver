@@ -97,12 +97,17 @@ fileprivate extension GBServerCTL.VersionCommand {
         
         static func _printResult(_ data: Data) {
             let decoder = JSONDecoder()
-            guard let result = try? decoder.decode(GenericSuccessResponse.self, from: data) else {
+            guard let result = try? decoder.decode(GenericMessageResponse.self, from: data) else {
                 print("Unable to decode response from server")
                 return
             }
             
-            print(result.message)
+            switch result {
+            case .success(let message):
+                print("Succeeded with message: \(message)")
+            case .failure(let message):
+                print("Failed with message: \(message)")
+            }
         }
         
         private struct AddXPCRequest: XPCRequest {

@@ -59,9 +59,9 @@ fileprivate extension GBServerCTL.UserCommand {
             let count = result.count
             print("Found \(count) user", terminator: count == 1 ? "\n" : "s\n")
             
-            for payload in result.sorted(by: { $0.name < $1.name }) {
+            for payload in result.sorted(by: { $0.printableDisplayName < $1.printableDisplayName }) {
                 print("User:")
-                print("   name: \"\(payload.name)\"")
+                print("   name: \"\(payload.printableDisplayName)\"")
                 print("   deviceID: \(payload.deviceID)")
             }
         }

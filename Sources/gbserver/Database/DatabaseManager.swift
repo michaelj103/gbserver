@@ -19,6 +19,7 @@ class DatabaseManager {
         case .onDisk(let path):
             dbQueue = try DatabaseQueue(path: path)
         }
+        self.tables = tables
     }
     
     func performInitialSetup() throws {

@@ -19,17 +19,21 @@ struct ListUsersCommand: ServerJSONCommand {
             throw RuntimeError("Fetching on both name and device ID is prohibited")
         }
         
-        let queryExpression: SQLSpecificExpressible
+        let queryExpression: SQLSpecificExpressible?
         if let name = payload.name {
             queryExpression = (UserModel.displayNameColumn.like(name))
         } else if let deviceID = payload.deviceID {
             queryExpression = (UserModel.deviceIDColumn.like(deviceID))
         } else {
-            queryExpression = UserModel.all()
+            queryExpression = nil
         }
         
-        let dataFuture = context.db.asyncRead(eventLoop: context.eventLoop) { db in
-            try UserModel.filter(queryExpression).fetchAll(db)
+        let dataFuture = context.db.asyncRead(eventLoop: context.eventLoop) { db -> [UserModel] in
+            if let queryExpression = queryExpression {
+                return try UserModel.filter(queryExpression).fetchAll(db)
+            } else {
+                return try UserModel.fetchAll(db)
+            }
         }.flatMapThrowing { users -> Data in
             let userPayloads = users.map { ListUsersXPCResponsePayload(user: $0) }
             let data = try JSONEncoder().encode(userPayloads)

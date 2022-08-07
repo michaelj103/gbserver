@@ -85,10 +85,10 @@ struct GBServer: ParsableCommand {
         let database: DatabaseManager
         if let databasePath = databasePath {
             print("Opening database at \(databasePath)")
-            database = try DatabaseManager(databasePath, tables: tables)
+            database = try DatabaseManager(.onDisk(databasePath), tables: tables)
         } else {
             print("Opening in-memory database")
-            database = try DatabaseManager(tables: tables)
+            database = try DatabaseManager(.inMemory, tables: tables)
         }
         print("Setting up database...", terminator: "")
         do {
