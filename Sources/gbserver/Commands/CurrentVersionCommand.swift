@@ -7,7 +7,6 @@
 
 import Foundation
 import NIOCore
-import SQLite
 import GBServerPayloads
 
 struct CurrentVersionCommand: ServerJSONCommand {

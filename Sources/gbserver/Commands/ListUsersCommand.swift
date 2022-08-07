@@ -8,7 +8,6 @@
 import Foundation
 import NIOCore
 import GBServerPayloads
-import SQLite
 
 struct ListUsersCommand: ServerJSONCommand {
     let name = "listUsers"

@@ -5,7 +5,6 @@
 //  Created by Michael Brandt on 8/4/22.
 //
 
-import SQLite
 import GBServerPayloads
 
 struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable {

@@ -1,85 +1,43 @@
 //
-//  VersionModel.swift
+//  File.swift
 //  
 //
-//  Created by Michael Brandt on 8/1/22.
+//  Created by Michael Brandt on 8/5/22.
 //
 
-import SQLite
+import Foundation
+import GRDB
 import GBServerPayloads
 
-struct VersionModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable, DatabaseUpdatable {
-    let id: Int64
+struct VersionModel: Codable, DatabaseTable, FetchableRecord, MutablePersistableRecord {
+    private (set) var id: Int64?
     let build: Int64
     let versionName: String
     let type: VersionType
     
-    static let table = Table("Versions")
-    static let id = Expression<Int64>("id")
-    static let build = Expression<Int64>("build")
-    static let versionName = Expression<String>("versionName")
-    static let type = Expression<Int64>("type")
+    static let databaseTableName: String = "version"
     
-    // MARK: - Creating
+    private static let idColumnName = "id"
+    private static let buildColumnName = "build"
+    private static let versionNameColumnName = "versionName"
+    private static let typeColumnName = "type"
     
-    static func createIfNecessary(_ db: Connection) throws {
-        let versionsCreation = table.create(temporary: false, ifNotExists: true, withoutRowid: false) { builder in
-            builder.column(id, primaryKey: true)
-            builder.column(build, unique: true)
-            builder.column(versionName, unique: true)
-            builder.column(type)
-        }
-        
-        try db.run(versionsCreation)
-    }
+    static let buildColumn = Column(buildColumnName)
+    static let versionNameColumn = Column(versionNameColumnName)
+    static let typeColumn = Column(typeColumnName)
     
-    // MARK: - Fetching
-    
-    static func fetch(_ db: Connection, queryBuilder: QueryBuilder<VersionModel>) throws -> [VersionModel] {
-        let query = queryBuilder.query
-        let rowIterator = try db.prepareRowIterator(query)
-        let entries: [VersionModel] = try rowIterator.map({ element in
-            let entry = VersionModel(id: element[id], build: element[build], versionName: element[versionName], type: try _type(element[type]))
-            return entry
+    static func createTableIfNecessary(_ dbQueue: DatabaseQueue) throws {
+        try dbQueue.write({ db in
+            try db.create(table: databaseTableName, options: .ifNotExists, body: { tableDefinition in
+                tableDefinition.autoIncrementedPrimaryKey(idColumnName)
+                tableDefinition.column(buildColumnName, .integer).notNull().unique()
+                tableDefinition.column(versionNameColumnName, .text).notNull().unique()
+                tableDefinition.column(typeColumnName, .integer).notNull()
+            })
         })
-        return entries
     }
     
-    private static func _type(_ rawValue: Int64) throws -> VersionType {
-        guard let resolvedType = VersionType(rawValue: rawValue) else {
-            throw DatabaseError.invalidEnumScalarValue
-        }
-        return resolvedType
-    }
-    
-    // MARK: - Inserting
-    
-    typealias InsertRecord = VersionInsertion
-    struct VersionInsertion {
-        let build: Int64
-        let versionName: String
-        let type: VersionType
-    }
-    
-    static func insert(_ db: Connection, record: VersionInsertion) throws -> Int64 {
-        let insertion = table.insert(build <- record.build, versionName <- record.versionName, type <- record.type.rawValue)
-        let insertedRowID = try db.run(insertion)
-        return insertedRowID
-    }
-    
-    // MARK: - Updating
-    typealias UpdateRecord = VersionUpdate
-    struct VersionUpdate {
-        let type: VersionType
-        init(_ t: VersionType) {
-            type = t
-        }
-    }
-    
-    static func update(_ db: Connection, query: QueryBuilder<VersionModel>, record: VersionUpdate) throws -> Int {
-        let updateTable = query.query
-        let update = updateTable.update(type <- record.type.rawValue)
-        let updatedRows = try db.run(update)
-        return updatedRows
+    mutating func didInsert(with rowID: Int64, for column: String?) {
+        self.id = rowID
     }
 }
