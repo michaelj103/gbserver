@@ -22,13 +22,13 @@ extension DatabaseManager {
         return promise.futureResult
     }
     
-    func asyncRead<T>(eventLoop: NIOCore.EventLoop, value: @escaping (Result<Database, Error>) throws -> T) -> EventLoopFuture<T> {
+    func asyncRead<T>(eventLoop: NIOCore.EventLoop, value: @escaping (Database) throws -> T) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
         dbQueue.asyncRead { result in
             switch result {
-            case .success(_):
+            case .success(let database):
                 do {
-                    let output = try value(result)
+                    let output = try value(database)
                     promise.succeed(output)
                 } catch {
                     promise.fail(error)

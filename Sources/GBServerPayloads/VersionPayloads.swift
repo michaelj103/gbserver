@@ -45,5 +45,16 @@ public enum VersionType: Int64, Codable, CustomStringConvertible {
             return "staging"
         }
     }
+    
+    public var isSingletonType: Bool {
+        switch self {
+        case .legacy:
+            return false
+        case .current:
+            return true
+        case .staging:
+            return true
+        }
+    }
 }
 
