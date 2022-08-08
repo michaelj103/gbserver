@@ -8,6 +8,16 @@
 public enum GenericMessageResponse: Codable {
     case success(message: String)
     case failure(message: String)
+    
+    // For clients who don't really care about success or failure
+    public func getMessage() -> String {
+        switch self {
+        case .success(let message):
+            return message
+        case .failure(let message):
+            return message
+        }
+    }
 }
 
 // Allows clients optionally provide a value for a nullable property because nil is already taken
