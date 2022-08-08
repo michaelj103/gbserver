@@ -13,7 +13,8 @@ let package = Package(
         // .package(url: /* package url */, from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-nio", from: "2.0.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
-        .package(url: "https://github.com/groue/GRDB.swift.git", from: "5.26.0"),
+//        .package(url: "https://github.com/groue/GRDB.swift.git", from: "5.26.0"),
+        .package(url: "https://github.com/michaelj103/GRDB.swift.git", branch: "linuxSupport"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
