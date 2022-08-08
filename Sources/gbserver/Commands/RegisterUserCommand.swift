@@ -13,7 +13,7 @@ import SQLite
 struct RegisterUserCommand: ServerJSONCommand {
     let name = "registerUser"
     
-    private static let TotalAllowedUsers = 2 // For now. Stop registering users if we exceed this because something is up
+    private static let TotalAllowedUsers = 20 // For now. Stop registering users if we exceed this because something is up
     
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         let payload = try self.decodePayload(type: RegisterUserHTTPRequestPayload.self, data: data, decoder: decoder)
