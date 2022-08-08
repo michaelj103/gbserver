@@ -18,7 +18,13 @@ struct RegisterUserCommand: ServerJSONCommand {
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         let payload = try self.decodePayload(type: RegisterUserHTTPRequestPayload.self, data: data, decoder: decoder)
         
-        let responseFuture = context.db.asyncWrite(eventLoop: context.eventLoop) { dbConnection -> Void in
+        let responseFuture = context.db.asyncWrite(eventLoop: context.eventLoop) { dbConnection -> RegistrationResult in
+            let deviceQuery = QueryBuilder<UserModel> { $0.filter(UserModel.deviceID == payload.deviceID )}
+            let registeredCount = try UserModel.fetchCount(dbConnection, queryBuilder: deviceQuery)
+            if registeredCount > 0 {
+                return .alreadyRegistered
+            }
+            
             let insertion = UserModel.InsertRecord(deviceID: payload.deviceID, name: payload.displayName)
             try UserModel.insert(dbConnection, record: insertion)
             
@@ -27,8 +33,15 @@ struct RegisterUserCommand: ServerJSONCommand {
             if count > RegisterUserCommand.TotalAllowedUsers {
                 throw RegistrationError.maxCountReached
             }
-        }.flatMapThrowing { _ -> Data in
-            let response = GenericMessageResponse.success(message: "Successfully registered user")
+            return .success
+        }.flatMapThrowing { result -> Data in
+            let response: GenericMessageResponse
+            switch result {
+            case .alreadyRegistered:
+                response = GenericMessageResponse.success(message: "Already registered")
+            case .success:
+                response = GenericMessageResponse.success(message: "Successfully registered user")
+            }
             let data = try JSONEncoder().encode(response)
             return data
         }
@@ -38,5 +51,10 @@ struct RegisterUserCommand: ServerJSONCommand {
     
     enum RegistrationError: Error {
         case maxCountReached
+    }
+    
+    private enum RegistrationResult {
+        case alreadyRegistered
+        case success
     }
 }
