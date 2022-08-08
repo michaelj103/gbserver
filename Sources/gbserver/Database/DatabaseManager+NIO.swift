@@ -10,21 +10,6 @@ import SQLite
 
 extension DatabaseManager {
     //TODO: Deprecated
-    func runFetch<T: DatabaseFetchable>(eventLoop: NIOCore.EventLoop, queryBuilder: QueryBuilder<T>) -> EventLoopFuture<[T]> {
-        let promise = eventLoop.makePromise(of: [T].self)
-        
-        fetchOnAccessQueue(queryBuilder) { result in
-            switch result {
-            case .success(let fetched):
-                promise.succeed(fetched)
-            case .failure(let error):
-                promise.fail(error)
-            }
-        }
-        return promise.futureResult
-    }
-    
-    //TODO: Deprecated
     func runInsert<T: DatabaseInsertable>(eventLoop: NIOCore.EventLoop, type: T.Type, insertion: T.InsertRecord) -> EventLoopFuture<Int64> {
         let promise = eventLoop.makePromise(of: Int64.self)
         insertOnAccessQueue(type, insertion: insertion) { result in

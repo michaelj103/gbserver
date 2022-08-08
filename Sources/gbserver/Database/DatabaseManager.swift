@@ -251,31 +251,6 @@ extension DatabaseFetchable {
     }
 }
 
-extension DatabaseManager {
-    func fetchOnAccessQueue<T: DatabaseFetchable>(_ queryBuilder: QueryBuilder<T>, completion: @escaping (Swift.Result<[T],Error>) -> Void) {
-        let db = self.db
-        queue.async {
-            let result: Swift.Result<[T],Error>
-            do {
-                let fetched = try T.fetch(db, queryBuilder: queryBuilder)
-                result = .success(fetched)
-            } catch {
-                result = .failure(error)
-            }
-            completion(result)
-        }
-    }
-    
-    func fetchOnAccessQueue<T: DatabaseFetchable>(_ queryBuilder: QueryBuilder<T>) throws -> [T] {
-        let db = self.db
-        var fetched = [T]()
-        try transactionSafeSyncOnAccessQueue {
-            fetched = try T.fetch(db, queryBuilder: queryBuilder)
-        }
-        return fetched
-    }
-}
-
 // MARK: - Transactions
 
 struct DatabaseTransaction<T> {

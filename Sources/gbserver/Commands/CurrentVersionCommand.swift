@@ -21,14 +21,15 @@ struct CurrentVersionCommand: ServerJSONCommand {
     
     private func _run(with payload: CurrentVersionHTTPRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
         let type = payload.reallyRequestedType()
-        let query = QueryBuilder<VersionModel> { table in
-            return table.filter(VersionModel.type == type.rawValue)
-        }
-        let future = context.db.runFetch(eventLoop: context.eventLoop, queryBuilder: query)
-        let dataFuture = future.flatMapThrowing { entries in
+        let query = QueryBuilder<VersionModel> { $0.filter(VersionModel.type == type.rawValue) }
+        
+        let responseFuture = context.db.asyncRead(eventLoop: context.eventLoop) { dbConnection in
+            try VersionModel.fetch(dbConnection, queryBuilder: query)
+        }.flatMapThrowing { entries in
             try _makeResponseData(payload: payload, entries: entries)
         }
-        return dataFuture
+        
+        return responseFuture
     }
     
     private func _makeResponseData(payload: CurrentVersionHTTPRequestPayload, entries: [VersionModel]) throws -> Data {
