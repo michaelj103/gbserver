@@ -61,6 +61,7 @@ struct VersionModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable, Datab
         let type: VersionType
     }
     
+    @discardableResult
     static func insert(_ db: Connection, record: VersionInsertion) throws -> Int64 {
         let insertion = table.insert(build <- record.build, versionName <- record.versionName, type <- record.type.rawValue)
         let insertedRowID = try db.run(insertion)

@@ -32,59 +32,36 @@ struct AddVersionCommand: ServerJSONCommand {
     
     private func _addLegacyVersion(with payload: AddVersionXPCRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
         let insertion = VersionModel.VersionInsertion(build: payload.build, versionName: payload.versionName, type: payload.type)
-        
-        let encodePromise = context.eventLoop.makePromise(of: Data.self)
-        
-        context.db.runInsert(eventLoop: context.eventLoop, type: VersionModel.self, insertion: insertion).whenComplete { result in
-            switch result {
-            case .success(_):
-                let genericResponse = GenericMessageResponse.success(message: "Successfully inserted legacy version \"\(payload.versionName)\"(\(payload.build))")
-                let data: Data
-                do {
-                    data = try JSONEncoder().encode(genericResponse)
-                    encodePromise.succeed(data)
-                } catch {
-                    encodePromise.fail(error)
-                }
-            case .failure(let error):
-                encodePromise.fail(error)
-            }
+        let responseFuture = context.db.asyncWrite(eventLoop: context.eventLoop) { dbConnection in
+            try VersionModel.insert(dbConnection, record: insertion)
+        }.flatMapThrowing { _ -> Data in
+            let genericResponse = GenericMessageResponse.success(message: "Successfully inserted legacy version \"\(payload.versionName)\"(\(payload.build))")
+            let data = try JSONEncoder().encode(genericResponse)
+            return data
         }
-        return encodePromise.futureResult
+        
+        return responseFuture
     }
     
     private func _addSingletonVersion(with payload: AddVersionXPCRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
         let targetVersionType = payload.type
-        let transaction = context.db.createTransaction { manager -> Int in
-            // change all existing targetVersionType versions (should be 1) to legacy
+        let responseFuture = context.db.asyncWrite(eventLoop: context.eventLoop) { dbConnection -> Int in
+            // change all existing targetVersionType versions (should be 1) to legacy in the same transaction as the insert
             let queryToUpdate = QueryBuilder<VersionModel> { $0.filter(VersionModel.type == targetVersionType.rawValue) }
             let updateToLegacy = VersionModel.UpdateRecord(.legacy)
-            let updatedCount = try manager.updateOnAccessQueue(queryToUpdate, record: updateToLegacy)
+            let updatedCount = try VersionModel.update(dbConnection, query: queryToUpdate, record: updateToLegacy)
             
             // insert the new targetVersionType version
             let insertion = VersionModel.VersionInsertion(build: payload.build, versionName: payload.versionName, type: targetVersionType)
-            try manager.insertOnAccessQueue(VersionModel.self, insertion: insertion)
+            try VersionModel.insert(dbConnection, record: insertion)
             
             return updatedCount
+        }.flatMapThrowing { count -> Data in
+            let genericResponse = GenericMessageResponse.success(message: "Successfully inserted \(targetVersionType) version \"\(payload.versionName)\"(\(payload.build)). Updated \(count) existing version\(count == 1 ? "" : "s") to legacy")
+            let data = try JSONEncoder().encode(genericResponse)
+            return data
         }
         
-        let encodePromise = context.eventLoop.makePromise(of: Data.self)
-        context.db.runTransaction(transaction) { result in
-            switch result {
-            case .success(let count):
-                let genericResponse = GenericMessageResponse.success(message: "Successfully inserted \(targetVersionType) version \"\(payload.versionName)\"(\(payload.build)). Updated \(count) existing version\(count == 1 ? "" : "s") to legacy")
-                let data: Data
-                do {
-                    data = try JSONEncoder().encode(genericResponse)
-                    encodePromise.succeed(data)
-                } catch {
-                    encodePromise.fail(error)
-                }
-            case .failure(let error):
-                encodePromise.fail(error)
-            }
-        }
-        
-        return encodePromise.futureResult
+        return responseFuture
     }
 }
