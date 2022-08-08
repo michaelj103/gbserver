@@ -45,6 +45,7 @@ struct GBServer: ParsableCommand {
         // First, configure the commands that the server responds to
         let commandCenter = ServerJSONCommandCenter()
         commandCenter.registerCommand(CurrentVersionCommand())
+        commandCenter.registerCommand(RegisterUserCommand())
         
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)
@@ -114,6 +115,8 @@ struct GBServer: ParsableCommand {
         let commandCenter = ServerJSONCommandCenter()
         commandCenter.registerCommand(CurrentVersionCommand())
         commandCenter.registerCommand(AddVersionCommand())
+        commandCenter.registerCommand(ListUsersCommand())
+        commandCenter.registerCommand(RegisterUserCommand())
         
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)

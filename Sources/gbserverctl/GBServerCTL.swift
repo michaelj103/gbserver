@@ -13,6 +13,6 @@ struct GBServerCTL : ParsableCommand {
     static var configuration = CommandConfiguration(
         commandName: "gbserverctl",
         abstract: "CLI for interfacing with the GB Server",
-        subcommands: [VersionCommand.self]
+        subcommands: [VersionCommand.self, UserCommand.self]
     )
 }

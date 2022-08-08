@@ -24,10 +24,9 @@ struct AddVersionCommand: ServerJSONCommand {
         case .legacy:
             return _addLegacyVersion(with: payload, context: context)
         case .current:
-            return _addCurrentVersion(with: payload, context: context)
+            return _addSingletonVersion(with: payload, context: context)
         case .staging:
-            preconditionFailure("Staging Not handled")
-//            return _addStagingVersion(with: payload, context: context)
+            return _addSingletonVersion(with: payload, context: context)
         }
     }
     
@@ -39,7 +38,7 @@ struct AddVersionCommand: ServerJSONCommand {
         context.db.runInsert(eventLoop: context.eventLoop, type: VersionModel.self, insertion: insertion).whenComplete { result in
             switch result {
             case .success(_):
-                let genericResponse = GenericSuccessResponse(message: "Successfully inserted legacy version \"\(payload.versionName)\"(\(payload.build))")
+                let genericResponse = GenericMessageResponse.success(message: "Successfully inserted legacy version \"\(payload.versionName)\"(\(payload.build))")
                 let data: Data
                 do {
                     data = try JSONEncoder().encode(genericResponse)
@@ -54,15 +53,16 @@ struct AddVersionCommand: ServerJSONCommand {
         return encodePromise.futureResult
     }
     
-    private func _addCurrentVersion(with payload: AddVersionXPCRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
+    private func _addSingletonVersion(with payload: AddVersionXPCRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
+        let targetVersionType = payload.type
         let transaction = context.db.createTransaction { manager -> Int in
-            // change all existing current versions (should be 1) to legacy
-            let queryToUpdate = QueryBuilder<VersionModel> { $0.filter(VersionModel.type == VersionType.current.rawValue) }
+            // change all existing targetVersionType versions (should be 1) to legacy
+            let queryToUpdate = QueryBuilder<VersionModel> { $0.filter(VersionModel.type == targetVersionType.rawValue) }
             let updateToLegacy = VersionModel.UpdateRecord(.legacy)
             let updatedCount = try manager.updateOnAccessQueue(queryToUpdate, record: updateToLegacy)
             
-            // insert the new current version
-            let insertion = VersionModel.VersionInsertion(build: payload.build, versionName: payload.versionName, type: payload.type)
+            // insert the new targetVersionType version
+            let insertion = VersionModel.VersionInsertion(build: payload.build, versionName: payload.versionName, type: targetVersionType)
             try manager.insertOnAccessQueue(VersionModel.self, insertion: insertion)
             
             return updatedCount
@@ -72,7 +72,7 @@ struct AddVersionCommand: ServerJSONCommand {
         context.db.runTransaction(transaction) { result in
             switch result {
             case .success(let count):
-                let genericResponse = GenericSuccessResponse(message: "Successfully inserted current version \"\(payload.versionName)\"(\(payload.build)). Updated \(count) existing version\(count == 1 ? "" : "s") to legacy")
+                let genericResponse = GenericMessageResponse.success(message: "Successfully inserted \(targetVersionType) version \"\(payload.versionName)\"(\(payload.build)). Updated \(count) existing version\(count == 1 ? "" : "s") to legacy")
                 let data: Data
                 do {
                     data = try JSONEncoder().encode(genericResponse)
@@ -87,8 +87,4 @@ struct AddVersionCommand: ServerJSONCommand {
         
         return encodePromise.futureResult
     }
-    
-//    private func _addStagingVersion(with payload: AddVersionXPCRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
-//
-//    }
 }
