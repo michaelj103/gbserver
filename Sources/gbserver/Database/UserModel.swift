@@ -8,7 +8,7 @@
 import SQLite
 import GBServerPayloads
 
-struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable {
+struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, DatabaseUpdatable {
     let id: Int64
     let deviceID: String
     let displayName: String?
@@ -48,12 +48,37 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable {
         let name: String?
     }
     
-    
     @discardableResult
     static func insert(_ db: Connection, record: InsertRecord) throws -> Int64 {
         let insertion = table.insert(deviceID <- record.deviceID, displayName <- record.name)
         let insertedRowID = try db.run(insertion)
         return insertedRowID
+    }
+    
+    // MARK: - Updating
+    
+    typealias UpdateRecord = UserUpdate
+    struct UserUpdate {
+        let updatedDisplayName: NullablePropertyWrapper<String>?
+        init(displayName: String?) {
+            self.updatedDisplayName = NullablePropertyWrapper(displayName)
+        }
+    }
+    
+    static func update(_ db: Connection, query: QueryBuilder<UserModel>, record: UserUpdate) throws -> Int {
+        var setters = [Setter]()
+        if let wrapper = record.updatedDisplayName {
+            setters.append(displayName <- wrapper.value)
+        }
+        
+        if setters.isEmpty {
+            return 0
+        } else {
+            let updateTable = query.query
+            let update = updateTable.update(setters)
+            let updatedRowCount = try db.run(update)
+            return updatedRowCount
+        }
     }
 }
 

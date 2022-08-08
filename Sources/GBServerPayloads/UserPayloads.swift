@@ -60,3 +60,20 @@ public struct RegisterUserHTTPRequestPayload: Codable {
 }
 
 public typealias RegisterUserXPCRequestPayload = RegisterUserHTTPRequestPayload
+
+public struct UpdateUserXPCRequestPayload: Codable {
+    // immutable properties
+    public let deviceID: String
+    
+    // mutable properties
+    public let updatedName: NullablePropertyWrapper<String>?
+    
+    public let clientInfo: ClientInfo?
+        
+    public init(deviceID: String, displayName: String?) {
+        self.deviceID = deviceID
+        self.updatedName = NullablePropertyWrapper(displayName)
+        
+        self.clientInfo = ClientInfo()
+    }
+}

@@ -13,12 +13,14 @@ import Foundation
      struct UserCommand: ParsableCommand {
          static var configuration = CommandConfiguration(
              commandName: "user",
-             subcommands: [List.self, Register.self]
+             subcommands: [List.self, Register.self, Update.self]
          )
      }
  }
 
- fileprivate extension GBServerCTL.UserCommand {
+// MARK: - Listing users
+
+fileprivate extension GBServerCTL.UserCommand {
      struct List: ParsableCommand {
 
          @Option(name: [.customShort("n"), .long], help: "The user display name (or pattern) to filter on.")
@@ -81,7 +83,9 @@ import Foundation
      }
  }
 
- fileprivate extension GBServerCTL.UserCommand {
+// MARK: - Registering users
+
+fileprivate extension GBServerCTL.UserCommand {
      struct Register: ParsableCommand {
 
          @Option(name: [.customShort("n"), .long], help: "The user display name to register.")
@@ -129,3 +133,70 @@ import Foundation
          }
      }
  }
+
+// MARK: - Updating existing users
+
+fileprivate extension GBServerCTL.UserCommand {
+    struct Update: ParsableCommand {
+        
+        @Option(name: .shortAndLong, help: "The deviceID for the user to update.")
+        var deviceID: String
+        
+        @Option(name: [.customShort("n"), .long], help: "The user display name to register.")
+        var displayName: String?
+        
+        @Flag(help: "If specified, sets the display name to NULL")
+        var deleteDisplayName: Bool = false
+        
+        func validate() throws {
+            if displayName != nil && deleteDisplayName {
+                throw CommandError("Can't both set and delete a display name")
+            }
+        }
+        
+        mutating func run() throws {
+            let connectionManager = XPCConnectionManager()
+            let connection = try connectionManager.makeConnection()
+            
+            let request: UpdateUserXPCRequest
+            if deleteDisplayName {
+                request = UpdateUserXPCRequest(deviceID: deviceID, displayName: nil)
+            } else if let actualDisplayName = displayName {
+                request = UpdateUserXPCRequest(deviceID: deviceID, displayName: actualDisplayName)
+            } else {
+                throw CommandError("Nothing to do")
+            }
+            try connection.sendRequest(request) { result in
+                switch result {
+                case .success(let data):
+                    Update._printResult(data)
+                case .failure(let error):
+                    print("list failed with error: \(error)")
+                }
+            }
+        }
+        
+        static private func _printResult(_ data: Data) {
+            guard let result = try? JSONDecoder().decode(GenericMessageResponse.self, from: data) else {
+                print("Unable to decode response from server")
+                return
+            }
+            
+            switch result {
+            case .success(let message):
+                print("Received success with message: \(message)")
+            case .failure(let message):
+                print("Received failure with message: \(message)")
+            }
+        }
+        
+        private struct UpdateUserXPCRequest: XPCRequest {
+            let name = "updateUser"
+            let payload: UpdateUserXPCRequestPayload
+            
+            init(deviceID: String, displayName: String?) {
+                payload = UpdateUserXPCRequestPayload(deviceID: deviceID, displayName: displayName)
+            }
+        }
+    }
+}
