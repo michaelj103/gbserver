@@ -38,7 +38,7 @@ struct AddVersionCommand: ServerJSONCommand {
         context.db.runInsert(eventLoop: context.eventLoop, type: VersionModel.self, insertion: insertion).whenComplete { result in
             switch result {
             case .success(_):
-                let genericResponse = GenericSuccessResponse(message: "Successfully inserted legacy version \"\(payload.versionName)\"(\(payload.build))")
+                let genericResponse = GenericMessageResponse.success(message: "Successfully inserted legacy version \"\(payload.versionName)\"(\(payload.build))")
                 let data: Data
                 do {
                     data = try JSONEncoder().encode(genericResponse)
@@ -72,7 +72,7 @@ struct AddVersionCommand: ServerJSONCommand {
         context.db.runTransaction(transaction) { result in
             switch result {
             case .success(let count):
-                let genericResponse = GenericSuccessResponse(message: "Successfully inserted \(targetVersionType) version \"\(payload.versionName)\"(\(payload.build)). Updated \(count) existing version\(count == 1 ? "" : "s") to legacy")
+                let genericResponse = GenericMessageResponse.success(message: "Successfully inserted \(targetVersionType) version \"\(payload.versionName)\"(\(payload.build)). Updated \(count) existing version\(count == 1 ? "" : "s") to legacy")
                 let data: Data
                 do {
                     data = try JSONEncoder().encode(genericResponse)

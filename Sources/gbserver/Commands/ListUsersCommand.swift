@@ -15,12 +15,12 @@ struct ListUsersCommand: ServerJSONCommand {
     
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         let payload = try decodePayload(type: ListUsersXPCRequestPayload.self, data: data, decoder: decoder)
-        if payload.name != nil && payload.deviceID != nil {
+        if payload.displayName != nil && payload.deviceID != nil {
             throw RuntimeError("Fetching on both name and device ID is prohibited")
         }
         
         let future: EventLoopFuture<[UserModel]>
-        if let name = payload.name {
+        if let name = payload.displayName {
             future = _fetchUsersWithName(name, context: context)
         } else if let deviceID = payload.deviceID {
             future = _fetchUsersWithDeviceID(deviceID, context: context)
@@ -59,6 +59,6 @@ struct ListUsersCommand: ServerJSONCommand {
 
 fileprivate extension ListUsersXPCResponsePayload {
     init(user: UserModel) {
-        self.init(deviceID: user.deviceID, name: user.name)
+        self.init(deviceID: user.deviceID, displayName: user.displayName)
     }
 }

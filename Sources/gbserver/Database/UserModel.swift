@@ -11,18 +11,18 @@ import GBServerPayloads
 struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable {
     let id: Int64
     let deviceID: String
-    let name: String
+    let displayName: String?
     
     static let table = Table("Users")
     static let id = Expression<Int64>("id")
     static let deviceID = Expression<String>("deviceID")
-    static let name = Expression<String>("name")
+    static let displayName = Expression<String?>("displayName")
     
     static func createIfNecessary(_ db: Connection) throws {
         let userCreation = table.create(temporary: false, ifNotExists: true, withoutRowid: false) { builder in
             builder.column(id, primaryKey: true)
             builder.column(deviceID, unique: true)
-            builder.column(name)
+            builder.column(displayName, unique: true)
         }
 
         try db.run(userCreation)
@@ -34,7 +34,7 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable {
         let query = queryBuilder.query
         let rowIterator = try db.prepareRowIterator(query)
         let entries: [UserModel] = try rowIterator.map({ element in
-            let entry = UserModel(id: element[id], deviceID: element[deviceID], name: element[name])
+            let entry = UserModel(id: element[id], deviceID: element[deviceID], displayName: element[displayName])
             return entry
         })
         return entries
@@ -49,8 +49,7 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable {
     }
     
     static func insert(_ db: Connection, record: InsertRecord) throws -> Int64 {
-        let resolvedName = record.name ?? "Unknown Name"
-        let insertion = table.insert(deviceID <- record.deviceID, name <- resolvedName)
+        let insertion = table.insert(deviceID <- record.deviceID, displayName <- record.name)
         let insertedRowID = try db.run(insertion)
         return insertedRowID
     }

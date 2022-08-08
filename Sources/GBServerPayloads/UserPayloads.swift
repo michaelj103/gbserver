@@ -7,40 +7,56 @@
 
 public struct ListUsersXPCRequestPayload: Codable {
     public let deviceID: String?
-    public let name: String?
+    public let displayName: String?
     
-    public init(deviceID: String) {
+    public let clientInfo: ClientInfo
+    
+    private init(deviceID: String?, displayName: String?) {
         self.deviceID = deviceID
-        self.name = nil
+        self.displayName = displayName
+        
+        self.clientInfo = ClientInfo()
     }
     
-    public init(name: String) {
-        self.deviceID = nil
-        self.name = name
+    public init(deviceID: String) {
+        self.init(deviceID: deviceID, displayName: nil)
+    }
+    
+    public init(displayName: String) {
+        self.init(deviceID: nil, displayName: displayName)
     }
     
     public init() {
-        self.deviceID = nil
-        self.name = nil
+        self.init(deviceID: nil, displayName: nil)
     }
 }
 
 public struct ListUsersXPCResponsePayload: Codable {
     public let deviceID: String
-    public let name: String
+    public let displayName: String?
+        
+    public var printableDisplayName: String {
+        return displayName ?? "<Null>"
+    }
     
-    public init(deviceID: String, name: String) {
+    public init(deviceID: String, displayName: String?) {
         self.deviceID = deviceID
-        self.name = name
+        self.displayName = displayName
     }
 }
 
 public struct RegisterUserHTTPRequestPayload: Codable {
     public let deviceID: String
-    public let name: String?
+    public let displayName: String?
     
-    public init(deviceID: String, name: String?) {
+    public let clientInfo: ClientInfo
+    
+    public init(deviceID: String, displayName: String?) {
         self.deviceID = deviceID
-        self.name = name
+        self.displayName = displayName
+        
+        self.clientInfo = ClientInfo()
     }
 }
+
+public typealias RegisterUserXPCRequestPayload = RegisterUserHTTPRequestPayload
