@@ -19,41 +19,24 @@ struct ListUsersCommand: ServerJSONCommand {
             throw RuntimeError("Fetching on both name and device ID is prohibited")
         }
         
-        let future: EventLoopFuture<[UserModel]>
+        let queryBuilder: QueryBuilder<UserModel>
         if let name = payload.displayName {
-            future = _fetchUsersWithName(name, context: context)
+            queryBuilder = QueryBuilder<UserModel> { $0.filter(UserModel.displayName.like(name)) }
         } else if let deviceID = payload.deviceID {
-            future = _fetchUsersWithDeviceID(deviceID, context: context)
+            queryBuilder = QueryBuilder<UserModel> { $0.filter(UserModel.deviceID.like(deviceID)) }
         } else {
-            future = _fetchAllUsers(context)
+            queryBuilder = QueryBuilder<UserModel>()
         }
         
-        let dataFuture = future.flatMapThrowing { users -> Data in
+        let responseFuture = context.db.asyncRead(eventLoop: context.eventLoop) { dbConnection in
+            try UserModel.fetch(dbConnection, queryBuilder: queryBuilder)
+        }.flatMapThrowing { users -> Data in
             let userPayloads = users.map { ListUsersXPCResponsePayload(user: $0) }
             let data = try JSONEncoder().encode(userPayloads)
             return data
         }
         
-        return dataFuture
-    }
-    
-    private func _fetchAllUsers(_ context: ServerCommandContext) -> EventLoopFuture<[UserModel]> {
-        let queryBuilder = QueryBuilder<UserModel>()
-        let future = context.db.runFetch(eventLoop: context.eventLoop, queryBuilder: queryBuilder)
-        return future
-    }
-    
-    private func _fetchUsersWithName(_ name: String, context: ServerCommandContext) -> EventLoopFuture<[UserModel]> {
-        let nameExpression = Expression<String>("name")
-        let queryBuilder = QueryBuilder<UserModel> { $0.filter(nameExpression.like(name)) }
-        let future = context.db.runFetch(eventLoop: context.eventLoop, queryBuilder: queryBuilder)
-        return future
-    }
-    
-    private func _fetchUsersWithDeviceID(_ deviceID: String, context: ServerCommandContext) -> EventLoopFuture<[UserModel]> {
-        let queryBuilder = QueryBuilder<UserModel> { $0.filter(UserModel.deviceID.like(deviceID)) }
-        let future = context.db.runFetch(eventLoop: context.eventLoop, queryBuilder: queryBuilder)
-        return future
+        return responseFuture
     }
 }
 
