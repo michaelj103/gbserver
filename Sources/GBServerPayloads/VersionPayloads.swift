@@ -8,7 +8,7 @@
 public struct CurrentVersionHTTPRequestPayload: Codable {
     public let requestedType: VersionType?
     
-    public let clientInfo: ClientInfo
+    public let clientInfo: ClientInfo?
     
     public init(requestedType: VersionType?) {
         self.requestedType = requestedType

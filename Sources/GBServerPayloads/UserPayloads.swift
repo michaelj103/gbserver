@@ -9,7 +9,7 @@ public struct ListUsersXPCRequestPayload: Codable {
     public let deviceID: String?
     public let displayName: String?
     
-    public let clientInfo: ClientInfo
+    public let clientInfo: ClientInfo?
     
     private init(deviceID: String?, displayName: String?) {
         self.deviceID = deviceID
@@ -49,7 +49,7 @@ public struct RegisterUserHTTPRequestPayload: Codable {
     public let deviceID: String
     public let displayName: String?
     
-    public let clientInfo: ClientInfo
+    public let clientInfo: ClientInfo?
     
     public init(deviceID: String, displayName: String?) {
         self.deviceID = deviceID
