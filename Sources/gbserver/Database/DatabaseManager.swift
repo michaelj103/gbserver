@@ -31,7 +31,7 @@ class DatabaseManager {
     
     func performInitialSetup() throws {
         for table in tables {
-            try table.createIfNecessary(db)
+            try table.createTableIfNecessary(db)
         }
     }
     
@@ -57,6 +57,90 @@ class DatabaseManager {
             try queue.sync(execute: block)
         }
     }
+    
+    private var enterReadonlyStatement: Statement?
+    private func beginReadonly() throws {
+        let statement: Statement
+        if let stmt = enterReadonlyStatement {
+            statement = stmt
+        } else {
+            statement = try db.prepare("PRAGMA query_only = 1")
+        }
+        
+        try statement.run()
+    }
+    
+    private var exitReadonlyStatement: Statement?
+    private func endReadonly() throws {
+        let statement: Statement
+        if let stmt = exitReadonlyStatement {
+            statement = stmt
+        } else {
+            statement = try db.prepare("PRAGMA query_only = 0")
+        }
+        
+        try statement.run()
+    }
+    
+    func write<T>(_ updates: (Connection) throws -> T) throws -> T {
+        var result: T?
+        try queue.sync {
+            try db.transaction {
+                result = try updates(db)
+            }
+        }
+        return result!
+    }
+    
+    func asyncWrite<T>(_ updates: @escaping (Connection) throws -> T, completion: @escaping (Swift.Result<T,Error>) -> Void) {
+        let db = self.db
+        queue.async {
+            do {
+                var result: T?
+                try db.transaction {
+                    result = try updates(db)
+                }
+                completion(.success(result!))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    func read<T>(_ value: (Connection) throws -> T) throws -> T {
+        var result: T?
+        try queue.sync {
+            try throwingFirstError {
+                try beginReadonly()
+                try db.savepoint {
+                    result = try value(db)
+                }
+            } finally: {
+                try endReadonly()
+            }
+        }
+        return result!
+    }
+    
+    func asyncRead<T>(_ value: @escaping (Connection) throws -> T, completion: @escaping (Swift.Result<T,Error>) -> Void) {
+        let db = self.db
+        queue.async {
+            do {
+                var result: T?
+                try throwingFirstError {
+                    try self.beginReadonly()
+                    try db.savepoint {
+                        result = try value(db)
+                    }
+                } finally: {
+                    try self.endReadonly()
+                }
+                completion(.success(result!))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
 }
 
 enum DatabaseError: Swift.Error {
@@ -79,7 +163,7 @@ struct QueryBuilder<T: DatabaseFetchable> {
 
 protocol DatabaseTable {
     // TODO: I bet we could do this way more automatically in swift with property wrappers, etc
-    static func createIfNecessary(_ db: Connection) throws
+    static func createTableIfNecessary(_ db: Connection) throws
 }
 
 // MARK: - Inserting
@@ -87,6 +171,7 @@ protocol DatabaseTable {
 protocol DatabaseInsertable {
     associatedtype InsertRecord
     /// Attempts an insert based on the insertion record. Returns row ID if successful
+    @discardableResult
     static func insert(_ db: Connection, record: InsertRecord) throws -> Int64
 }
 
@@ -155,7 +240,15 @@ extension DatabaseManager {
 
 protocol DatabaseFetchable {
     static func fetch(_ db: Connection, queryBuilder: QueryBuilder<Self>) throws -> [Self]
+    static func fetchCount(_ db: Connection, queryBuilder: QueryBuilder<Self>) throws -> Int
     static var table: Table { get }
+}
+
+extension DatabaseFetchable {
+    static func fetchCount(_ db: Connection, queryBuilder: QueryBuilder<Self>) throws -> Int {
+        let query = queryBuilder.query
+        return try db.scalar(query.count)
+    }
 }
 
 extension DatabaseManager {

@@ -18,7 +18,7 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable {
     static let deviceID = Expression<String>("deviceID")
     static let displayName = Expression<String?>("displayName")
     
-    static func createIfNecessary(_ db: Connection) throws {
+    static func createTableIfNecessary(_ db: Connection) throws {
         let userCreation = table.create(temporary: false, ifNotExists: true, withoutRowid: false) { builder in
             builder.column(id, primaryKey: true)
             builder.column(deviceID, unique: true)
@@ -48,6 +48,8 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable {
         let name: String?
     }
     
+    
+    @discardableResult
     static func insert(_ db: Connection, record: InsertRecord) throws -> Int64 {
         let insertion = table.insert(deviceID <- record.deviceID, displayName <- record.name)
         let insertedRowID = try db.run(insertion)

@@ -22,7 +22,7 @@ struct VersionModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable, Datab
     
     // MARK: - Creating
     
-    static func createIfNecessary(_ db: Connection) throws {
+    static func createTableIfNecessary(_ db: Connection) throws {
         let versionsCreation = table.create(temporary: false, ifNotExists: true, withoutRowid: false) { builder in
             builder.column(id, primaryKey: true)
             builder.column(build, unique: true)
