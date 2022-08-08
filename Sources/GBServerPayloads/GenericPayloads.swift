@@ -5,7 +5,11 @@
 //  Created by Michael Brandt on 8/4/22.
 //
 
-public enum GenericMessageResponse: Codable {
-case success(message: String)
-case failure(message: String)
+import Foundation
+
+public struct GenericSuccessResponse: Codable {
+    public let message: String
+    public init(message: String) {
+        self.message = message
+    }
 }

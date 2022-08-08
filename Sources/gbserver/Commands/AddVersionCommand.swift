@@ -7,7 +7,7 @@
 
 import Foundation
 import NIOCore
-import GRDB
+import SQLite
 import GBServerPayloads
 
 struct AddVersionCommand: ServerJSONCommand {
@@ -24,45 +24,71 @@ struct AddVersionCommand: ServerJSONCommand {
         case .legacy:
             return _addLegacyVersion(with: payload, context: context)
         case .current:
-            return _addSingletonVersion(with: payload, context: context)
+            return _addCurrentVersion(with: payload, context: context)
         case .staging:
-            return _addSingletonVersion(with: payload, context: context)
+            preconditionFailure("Staging Not handled")
+//            return _addStagingVersion(with: payload, context: context)
         }
     }
     
     private func _addLegacyVersion(with payload: AddVersionXPCRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
-        var versionToInsert = VersionModel(id: nil, build: payload.build, versionName: payload.versionName, type: payload.type)
-        let future: EventLoopFuture<Void> = context.db.asyncWrite(eventLoop: context.eventLoop, updates: { db in
-            try versionToInsert.insert(db)
-        })
+        let insertion = VersionModel.VersionInsertion(build: payload.build, versionName: payload.versionName, type: payload.type)
         
-        let dataFuture: EventLoopFuture<Data> = future.flatMapThrowing { _ in
-            let genericResponse = GenericMessageResponse.success(message: "Successfully inserted legacy version \"\(payload.versionName)\"(\(payload.build))")
-            let data = try JSONEncoder().encode(genericResponse)
-            return data
+        let encodePromise = context.eventLoop.makePromise(of: Data.self)
+        
+        context.db.runInsert(eventLoop: context.eventLoop, type: VersionModel.self, insertion: insertion).whenComplete { result in
+            switch result {
+            case .success(_):
+                let genericResponse = GenericSuccessResponse(message: "Successfully inserted legacy version \"\(payload.versionName)\"(\(payload.build))")
+                let data: Data
+                do {
+                    data = try JSONEncoder().encode(genericResponse)
+                    encodePromise.succeed(data)
+                } catch {
+                    encodePromise.fail(error)
+                }
+            case .failure(let error):
+                encodePromise.fail(error)
+            }
         }
-        
-        return dataFuture
+        return encodePromise.futureResult
     }
     
-    private func _addSingletonVersion(with payload: AddVersionXPCRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
-        let targetVersionType = payload.type
-        var versionToInsert = VersionModel(id: nil, build: payload.build, versionName: payload.versionName, type: targetVersionType)
-        let future: EventLoopFuture<Int> = context.db.asyncWrite(eventLoop: context.eventLoop) { db in
-            // move existing version of the target type to legacy in the same transaction as the insert
-            let updatedCount = try VersionModel
-                .filter(VersionModel.typeColumn == targetVersionType.rawValue)
-                .updateAll(db, VersionModel.typeColumn.set(to: VersionType.legacy.rawValue))
-            try versionToInsert.insert(db)
+    private func _addCurrentVersion(with payload: AddVersionXPCRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
+        let transaction = context.db.createTransaction { manager -> Int in
+            // change all existing current versions (should be 1) to legacy
+            let queryToUpdate = QueryBuilder<VersionModel> { $0.filter(VersionModel.type == VersionType.current.rawValue) }
+            let updateToLegacy = VersionModel.UpdateRecord(.legacy)
+            let updatedCount = try manager.updateOnAccessQueue(queryToUpdate, record: updateToLegacy)
+            
+            // insert the new current version
+            let insertion = VersionModel.VersionInsertion(build: payload.build, versionName: payload.versionName, type: payload.type)
+            try manager.insertOnAccessQueue(VersionModel.self, insertion: insertion)
+            
             return updatedCount
         }
         
-        let dataFuture: EventLoopFuture<Data> = future.flatMapThrowing { count in
-            let genericResponse = GenericMessageResponse.success(message: "Successfully inserted \(targetVersionType) version \"\(payload.versionName)\"(\(payload.build)). Updated \(count) existing version\(count == 1 ? "" : "s") to legacy")
-            let data = try JSONEncoder().encode(genericResponse)
-            return data
+        let encodePromise = context.eventLoop.makePromise(of: Data.self)
+        context.db.runTransaction(transaction) { result in
+            switch result {
+            case .success(let count):
+                let genericResponse = GenericSuccessResponse(message: "Successfully inserted current version \"\(payload.versionName)\"(\(payload.build)). Updated \(count) existing version\(count == 1 ? "" : "s") to legacy")
+                let data: Data
+                do {
+                    data = try JSONEncoder().encode(genericResponse)
+                    encodePromise.succeed(data)
+                } catch {
+                    encodePromise.fail(error)
+                }
+            case .failure(let error):
+                encodePromise.fail(error)
+            }
         }
         
-        return dataFuture
+        return encodePromise.futureResult
     }
+    
+//    private func _addStagingVersion(with payload: AddVersionXPCRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
+//
+//    }
 }
