@@ -46,6 +46,7 @@ struct GBServer: ParsableCommand {
         let commandCenter = ServerJSONCommandCenter()
         commandCenter.registerCommand(CurrentVersionCommand())
         commandCenter.registerCommand(RegisterUserCommand())
+        commandCenter.registerCommand(CheckInCommand())
         
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)
@@ -82,6 +83,7 @@ struct GBServer: ParsableCommand {
         // Open and set up db
         let tables: [DatabaseTable.Type] = [VersionModel.self,
                                             UserModel.self,
+                                            CheckInModel.self,
         ]
         let database: DatabaseManager
         if let databasePath = databasePath {
@@ -118,6 +120,8 @@ struct GBServer: ParsableCommand {
         commandCenter.registerCommand(ListUsersCommand())
         commandCenter.registerCommand(RegisterUserCommand())
         commandCenter.registerCommand(UpdateUserCommand())
+        commandCenter.registerCommand(CheckInCommand())
+        commandCenter.registerCommand(ListCheckInsCommand())
         
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)

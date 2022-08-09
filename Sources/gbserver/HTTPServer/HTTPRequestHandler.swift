@@ -68,7 +68,7 @@ final class HTTPRequestHandler: ChannelInboundHandler {
             return
         }
         // Use Foundation's URL for parsing
-        guard let url = URL(string: requestHeader.uri) else {
+        guard let urlComponents = URLComponents(string: requestHeader.uri) else {
             print("Unable to parse as URL \(requestHeader.uri)")
             _sendEmptyStatus(context: context, status: .internalServerError)
             return
@@ -76,7 +76,7 @@ final class HTTPRequestHandler: ChannelInboundHandler {
         hasProcessed = true
         
         let apiPrefix = "/api/"
-        let relativePath = url.relativePath
+        let relativePath = urlComponents.path
         if !relativePath.hasPrefix(apiPrefix) {
             _sendEmptyStatus(context: context, status: .notFound)
         } else {

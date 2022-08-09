@@ -104,7 +104,7 @@ fileprivate extension GBServerCTL.UserCommand {
                 case .success(let data):
                     Register._printResult(data)
                 case .failure(let error):
-                    print("list failed with error: \(error)")
+                    print("register failed with error: \(error)")
                 }
             }
         }
@@ -171,7 +171,7 @@ fileprivate extension GBServerCTL.UserCommand {
                 case .success(let data):
                     Update._printResult(data)
                 case .failure(let error):
-                    print("list failed with error: \(error)")
+                    print("update failed with error: \(error)")
                 }
             }
         }

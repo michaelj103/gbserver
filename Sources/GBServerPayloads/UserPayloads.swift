@@ -5,6 +5,8 @@
 //  Created by Michael Brandt on 8/5/22.
 //
 
+import Foundation
+
 public struct ListUsersXPCRequestPayload: Codable {
     public let deviceID: String?
     public let displayName: String?
@@ -75,5 +77,43 @@ public struct UpdateUserXPCRequestPayload: Codable {
         self.updatedName = NullablePropertyWrapper(displayName)
         
         self.clientInfo = ClientInfo()
+    }
+}
+
+public struct CheckInUserHTTPRequestPayload: Codable {
+    public let deviceID: String
+    
+    public let clientInfo: ClientInfo?
+    
+    public init(deviceID: String) {
+        self.deviceID = deviceID
+        
+        self.clientInfo = ClientInfo()
+    }
+}
+
+public typealias CheckInUserXPCRequestPayload = CheckInUserHTTPRequestPayload
+
+public struct ListCheckInsXPCRequestPayload: Codable {
+    public let deviceID: String
+    public let maxCount: Int?
+    
+    public let clientInfo: ClientInfo?
+    
+    public init(deviceID: String, maxCount: Int?) {
+        self.deviceID = deviceID
+        self.maxCount = maxCount
+        
+        self.clientInfo = ClientInfo()
+    }
+}
+
+public struct ListCheckInsXPCResponsePayload: Codable {
+    public let deviceID: String
+    public let checkIns: [Date]
+    
+    public init(deviceID: String, checkIns: [Date]) {
+        self.deviceID = deviceID
+        self.checkIns = checkIns
     }
 }
