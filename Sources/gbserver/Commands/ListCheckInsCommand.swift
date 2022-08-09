@@ -23,7 +23,7 @@ struct ListCheckInsCommand: ServerJSONCommand {
             }
             
             let checkInsQuery = QueryBuilder<CheckInModel> {
-                $0.filter(CheckInModel.userID == user.id).limit(payload.maxCount).order(CheckInModel.date.asc)
+                $0.filter(CheckInModel.userID == user.id).limit(payload.maxCount).order(CheckInModel.date.desc)
             }
             let checkIns = try CheckInModel.fetch(dbConnection, queryBuilder: checkInsQuery)
             return .success(checkIns)
