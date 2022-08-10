@@ -63,7 +63,7 @@ fileprivate extension GBServerCTL.UserCommand {
                 print("User:")
                 print("   name: \"\(payload.printableDisplayName)\"")
                 print("   deviceID: \(payload.deviceID)")
-                print("   debugAuthorized: \(payload.debugAuthorized ? "YES" : "NO")")
+                print("   debugAuthorized: \(payload.debugAuthorized)")
             }
         }
         
@@ -149,7 +149,7 @@ fileprivate extension GBServerCTL.UserCommand {
         @Flag(help: "If specified, sets the display name to NULL")
         var deleteDisplayName: Bool = false
         
-        @Option
+        @Option(help: "Toggle debug authorization to 'true' or 'false'")
         var setDebugAuthorized: Bool?
         
         func validate() throws {
