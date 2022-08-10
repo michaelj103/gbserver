@@ -121,3 +121,23 @@ public struct ListCheckInsXPCResponsePayload: Codable {
         self.checkIns = checkIns
     }
 }
+
+public struct UserGetDebugAuthHTTPRequestPayload: QueryDecodable {
+    public let deviceID: String
+    
+    public init(query: [String : String]) throws {
+        if let deviceID = query["deviceID"] {
+            self.deviceID = deviceID
+        } else {
+            throw RequestDecodeError("Missing value for \"deviceID\"")
+        }
+    }
+}
+
+public struct UserGetDebugAuthHTTPResponsePayload: Codable {
+    public let authorized: Bool
+    public init(_ authorized: Bool) {
+        self.authorized = authorized
+    }
+}
+

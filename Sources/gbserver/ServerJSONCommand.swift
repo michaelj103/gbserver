@@ -87,6 +87,10 @@ extension ServerJSONCommand {
         return payload
     }
     
+    func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
+        throw RuntimeError("XPC payloads aren't supported by the \(name) command")
+    }
+    
     func run(with arguments: [URLQueryItem], context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         throw RuntimeError("Query arguments aren't supported by the \(name) command")
     }

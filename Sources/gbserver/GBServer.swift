@@ -47,6 +47,7 @@ struct GBServer: ParsableCommand {
         commandCenter.registerCommand(CurrentVersionCommand())
         commandCenter.registerCommand(RegisterUserCommand())
         commandCenter.registerCommand(CheckInCommand())
+        commandCenter.registerCommand(UserGetDebugAuthCommand())
         
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)
