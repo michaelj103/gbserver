@@ -14,3 +14,7 @@ public struct ClientInfo: Codable {
         self.clientVersion = ClientInfo.currentAPIVersion
     }
 }
+
+public protocol QueryDecodable {
+    init(query: [String:String]) throws
+}

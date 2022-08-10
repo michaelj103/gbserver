@@ -81,9 +81,20 @@ final class HTTPRequestHandler: ChannelInboundHandler {
             _sendEmptyStatus(context: context, status: .notFound)
         } else {
             let commandString = String(relativePath.dropFirst(apiPrefix.count))
-            let bodyData: Data = requestBody != nil ? Data(buffer: requestBody!, byteTransferStrategy: .noCopy) : "{}".data(using: .utf8)!
+            
+            let processingType: RequestProcessingType
+            switch requestHeader.method {
+            case .GET:
+                processingType = .get(urlComponents.queryItems ?? [])
+            case .POST:
+                let bodyData: Data = requestBody != nil ? Data(buffer: requestBody!, byteTransferStrategy: .noCopy) : "{}".data(using: .utf8)!
+                processingType = .post(bodyData)
+            default:
+                processingType = .unsupported
+            }
+            
             do {
-                try _runCommand(context: context, commandName: commandString, data: bodyData)
+                try _runCommand(context: context, commandName: commandString, processingType: processingType)
             } catch ServerJSONCommandError.unrecognizedCommand {
                 print("Unrecognized command \"\(commandString)\"")
                 _sendEmptyStatus(context: context, status: .badRequest)
@@ -98,15 +109,29 @@ final class HTTPRequestHandler: ChannelInboundHandler {
         }
     }
     
-    private func _runCommand(context: ChannelHandlerContext, commandName: String, data: Data) throws {
+    private func _runCommand(context: ChannelHandlerContext, commandName: String, processingType: RequestProcessingType) throws {
         let commandContext = ServerCommandContext(eventLoop: context.eventLoop, db: database)
-        let responseFuture = try commandCenter.runCommand(commandName, data: data, context: commandContext)
+        
+        let responseFuture: EventLoopFuture<Data>
+        switch processingType {
+        case .get(let query):
+            responseFuture = try commandCenter.runCommand(commandName, query: query, context: commandContext)
+        case .post(let data):
+            responseFuture = try commandCenter.runCommand(commandName, data: data, context: commandContext)
+        case .unsupported:
+            responseFuture = context.eventLoop.makeFailedFuture(RequestError.unsupportedHTTPMethod)
+        }
+        
         responseFuture.whenSuccess { data in
             self._sendResponseJSONData(context: context, data)
         }
         responseFuture.whenFailure { error in
             print("Command \"\(commandName)\" encountered an error: \(error)")
-            self._sendEmptyStatus(context: context, status: .internalServerError)
+            if let _ = error as? RequestError {
+                self._sendEmptyStatus(context: context, status: .badRequest)
+            } else {
+                self._sendEmptyStatus(context: context, status: .internalServerError)
+            }
         }
     }
     
@@ -145,6 +170,16 @@ final class HTTPRequestHandler: ChannelInboundHandler {
         }
         
         context.writeAndFlush(self.wrapOutboundOut(.end(trailers)), promise: writeAndFlushPromise)
+    }
+    
+    private enum RequestProcessingType {
+        case get([URLQueryItem])
+        case post(Data)
+        case unsupported
+    }
+    
+    private enum RequestError: Error {
+        case unsupportedHTTPMethod
     }
 }
 

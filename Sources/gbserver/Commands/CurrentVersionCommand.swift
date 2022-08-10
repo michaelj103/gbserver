@@ -19,6 +19,12 @@ struct CurrentVersionCommand: ServerJSONCommand {
         return future
     }
     
+    func run(with arguments: [URLQueryItem], context: ServerCommandContext) throws -> EventLoopFuture<Data> {
+        let payload: CurrentVersionHTTPRequestPayload = try decodeQueryPayload(query: arguments)
+        let future = _run(with: payload, context: context)
+        return future
+    }
+    
     private func _run(with payload: CurrentVersionHTTPRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
         let type = payload.reallyRequestedType()
         let query = QueryBuilder<VersionModel> { $0.filter(VersionModel.type == type.rawValue) }

@@ -5,13 +5,28 @@
 //  Created by Michael Brandt on 8/3/22.
 //
 
-public struct CurrentVersionHTTPRequestPayload: Codable {
+public struct CurrentVersionHTTPRequestPayload: Codable, QueryDecodable {
     public let requestedType: VersionType?
     
     public let clientInfo: ClientInfo?
     
     public init(requestedType: VersionType?) {
         self.requestedType = requestedType
+        
+        self.clientInfo = ClientInfo()
+    }
+    
+    public init(query: [String:String]) throws {
+        if let requestedType = query["requestedType"] {
+            if let rawValue = Int64(requestedType), let versionType = VersionType(rawValue: rawValue) {
+                self.requestedType = versionType
+            } else {
+                throw RequestDecodeError("Bad value for \"requestedType\": \"\(requestedType)\"")
+            }
+        } else {
+            // No value specified
+            self.requestedType = nil
+        }
         
         self.clientInfo = ClientInfo()
     }
