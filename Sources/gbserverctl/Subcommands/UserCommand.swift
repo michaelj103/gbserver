@@ -149,6 +149,9 @@ fileprivate extension GBServerCTL.UserCommand {
         @Flag(help: "If specified, sets the display name to NULL")
         var deleteDisplayName: Bool = false
         
+        @Option
+        var setDebugAuthorized: Bool?
+        
         func validate() throws {
             if displayName != nil && deleteDisplayName {
                 throw CommandError("Can't both set and delete a display name")
@@ -159,14 +162,21 @@ fileprivate extension GBServerCTL.UserCommand {
             let connectionManager = XPCConnectionManager()
             let connection = try connectionManager.makeConnection()
             
-            let request: UpdateUserXPCRequest
+            let displayNameUpdate: NullablePropertyWrapper<String>?
             if deleteDisplayName {
-                request = UpdateUserXPCRequest(deviceID: deviceID, displayName: nil)
+                displayNameUpdate = NullablePropertyWrapper<String>(nil)
             } else if let actualDisplayName = displayName {
-                request = UpdateUserXPCRequest(deviceID: deviceID, displayName: actualDisplayName)
+                displayNameUpdate = NullablePropertyWrapper<String>(actualDisplayName)
             } else {
+                displayNameUpdate = nil
+            }
+            let debugAuthUpdate: Bool? = setDebugAuthorized
+            let request = UpdateUserXPCRequest(deviceID: deviceID, displayName: displayNameUpdate, debugAuthorized: debugAuthUpdate)
+            
+            if !request.hasUpdates() {
                 throw CommandError("Nothing to do")
             }
+            
             try connection.sendRequest(request) { result in
                 switch result {
                 case .success(let data):
@@ -195,8 +205,18 @@ fileprivate extension GBServerCTL.UserCommand {
             let name = "updateUser"
             let payload: UpdateUserXPCRequestPayload
             
-            init(deviceID: String, displayName: String?) {
-                payload = UpdateUserXPCRequestPayload(deviceID: deviceID, displayName: displayName)
+            init(deviceID: String, displayName: NullablePropertyWrapper<String>?, debugAuthorized: Bool?) {
+                payload = UpdateUserXPCRequestPayload(deviceID: deviceID, displayName: displayName, debugAuthorized: debugAuthorized)
+            }
+            
+            func hasUpdates() -> Bool {
+                if payload.updatedName != nil {
+                    return true
+                }
+                if payload.updatedDebugAuthorization != nil {
+                    return true
+                }
+                return false
             }
         }
     }

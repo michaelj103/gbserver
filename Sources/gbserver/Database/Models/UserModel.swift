@@ -63,8 +63,12 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, Database
     typealias UpdateRecord = UserUpdate
     struct UserUpdate {
         let updatedDisplayName: NullablePropertyWrapper<String>?
-        init(displayName: String?) {
-            self.updatedDisplayName = NullablePropertyWrapper(displayName)
+        let updatedDebugAuthorizedValue: Bool?
+        
+        // update only display name
+        init(displayName: NullablePropertyWrapper<String>?, debugAuthorized: Bool?) {
+            self.updatedDisplayName = displayName
+            self.updatedDebugAuthorizedValue = debugAuthorized
         }
     }
     
@@ -72,6 +76,9 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, Database
         var setters = [Setter]()
         if let wrapper = record.updatedDisplayName {
             setters.append(displayName <- wrapper.value)
+        }
+        if let debugAuth = record.updatedDebugAuthorizedValue {
+            setters.append(debugAuthorized <- debugAuth)
         }
         
         if setters.isEmpty {

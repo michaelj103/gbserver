@@ -71,12 +71,14 @@ public struct UpdateUserXPCRequestPayload: Codable {
     
     // mutable properties
     public let updatedName: NullablePropertyWrapper<String>?
+    public let updatedDebugAuthorization: Bool?
     
     public let clientInfo: ClientInfo?
         
-    public init(deviceID: String, displayName: String?) {
+    public init(deviceID: String, displayName: NullablePropertyWrapper<String>?, debugAuthorized: Bool?) {
         self.deviceID = deviceID
-        self.updatedName = NullablePropertyWrapper(displayName)
+        self.updatedName = displayName
+        self.updatedDebugAuthorization = debugAuthorized
         
         self.clientInfo = ClientInfo()
     }

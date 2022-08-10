@@ -15,8 +15,6 @@ struct UpdateUserCommand: ServerJSONCommand {
         
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         let payload = try self.decodePayload(type: UpdateUserXPCRequestPayload.self, data: data, decoder: decoder)
-        // Note, if there are other properties that can be updated in the future, we can't just always set the displayName like this
-        let newDisplayName: String? = payload.updatedName?.value
         
         let responseFuture = context.db.asyncWrite(eventLoop: context.eventLoop) { dbConnection -> UpdateResult in
             let userFetch = QueryBuilder<UserModel> { $0.filter(UserModel.deviceID == payload.deviceID) }
@@ -25,7 +23,7 @@ struct UpdateUserCommand: ServerJSONCommand {
                 return .noMatchingUsers
             }
             
-            let update = UserModel.UpdateRecord(displayName: newDisplayName)
+            let update = UserModel.UpdateRecord(displayName: payload.updatedName, debugAuthorized: payload.updatedDebugAuthorization)
             let updatedRowCount = try UserModel.update(dbConnection, query: userFetch, record: update)
             if updatedRowCount == 0 {
                 return .noMatchingUsers
@@ -33,12 +31,21 @@ struct UpdateUserCommand: ServerJSONCommand {
                 // This shouldn't be possible, consider it a server error
                 throw RuntimeError("UpdateUser: Multiple matching users for deviceID \(payload.deviceID)")
             }
-            return .success(user.displayName)
+            
+            // construct success message to be sent if nothing else goes wrong
+            var message = "Successfully updated User Record:"
+            if let nameUpdate = payload.updatedName {
+                message += "\n   displayName: \(user.displayName ?? "<Null>") -> \(nameUpdate.value ?? "<Null>")"
+            }
+            if let debugAuthUpdate = payload.updatedDebugAuthorization {
+                message += "\n   debugAuthorized: \(user.debugAuthorized) -> \(debugAuthUpdate)"
+            }
+            return .success(message)
         }.flatMapThrowing { updateResult -> Data in
             let genericResponse: GenericMessageResponse
             switch updateResult {
-            case .success(let oldName):
-                genericResponse = GenericMessageResponse.success(message: "Successfully updated from \(oldName ?? "<Null>") to \(newDisplayName ?? "<Null>")")
+            case .success(let message):
+                genericResponse = GenericMessageResponse.success(message: message)
             case .noMatchingUsers:
                 genericResponse = GenericMessageResponse.failure(message: "No users found that match the given deviceID")
             }
@@ -50,7 +57,9 @@ struct UpdateUserCommand: ServerJSONCommand {
     }
     
     private enum UpdateResult {
-        case success(String?)
+        case success(String)
         case noMatchingUsers
     }
 }
+
+
