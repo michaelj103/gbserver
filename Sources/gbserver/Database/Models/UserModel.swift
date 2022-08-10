@@ -12,17 +12,20 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, Database
     let id: Int64
     let deviceID: String
     let displayName: String?
+    let debugAuthorized: Bool
     
     static let table = Table("Users")
     static let id = Expression<Int64>("id")
     static let deviceID = Expression<String>("deviceID")
     static let displayName = Expression<String?>("displayName")
+    static let debugAuthorized = Expression<Bool>("debugAuthorized")
     
     static func createTableIfNecessary(_ db: Connection) throws {
         let userCreation = table.create(temporary: false, ifNotExists: true, withoutRowid: false) { builder in
             builder.column(id, primaryKey: true)
             builder.column(deviceID, unique: true)
             builder.column(displayName, unique: true)
+            builder.column(debugAuthorized, defaultValue: false)
         }
 
         try db.run(userCreation)
@@ -34,7 +37,7 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, Database
         let query = queryBuilder.query
         let rowIterator = try db.prepareRowIterator(query)
         let entries: [UserModel] = try rowIterator.map({ element in
-            let entry = UserModel(id: element[id], deviceID: element[deviceID], displayName: element[displayName])
+            let entry = UserModel(id: element[id], deviceID: element[deviceID], displayName: element[displayName], debugAuthorized: element[debugAuthorized])
             return entry
         })
         return entries
@@ -50,7 +53,7 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, Database
     
     @discardableResult
     static func insert(_ db: Connection, record: InsertRecord) throws -> Int64 {
-        let insertion = table.insert(deviceID <- record.deviceID, displayName <- record.name)
+        let insertion = table.insert(deviceID <- record.deviceID, displayName <- record.name, debugAuthorized <- false)
         let insertedRowID = try db.run(insertion)
         return insertedRowID
     }

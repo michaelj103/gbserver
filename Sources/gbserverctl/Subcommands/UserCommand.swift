@@ -63,6 +63,7 @@ fileprivate extension GBServerCTL.UserCommand {
                 print("User:")
                 print("   name: \"\(payload.printableDisplayName)\"")
                 print("   deviceID: \(payload.deviceID)")
+                print("   debugAuthorized: \(payload.debugAuthorized ? "YES" : "NO")")
             }
         }
         

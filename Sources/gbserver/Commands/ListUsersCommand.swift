@@ -42,6 +42,6 @@ struct ListUsersCommand: ServerJSONCommand {
 
 fileprivate extension ListUsersXPCResponsePayload {
     init(user: UserModel) {
-        self.init(deviceID: user.deviceID, displayName: user.displayName)
+        self.init(deviceID: user.deviceID, displayName: user.displayName, debugAuthorized: user.debugAuthorized)
     }
 }

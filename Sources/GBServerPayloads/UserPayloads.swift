@@ -36,14 +36,16 @@ public struct ListUsersXPCRequestPayload: Codable {
 public struct ListUsersXPCResponsePayload: Codable {
     public let deviceID: String
     public let displayName: String?
+    public let debugAuthorized: Bool
         
     public var printableDisplayName: String {
         return displayName ?? "<Null>"
     }
     
-    public init(deviceID: String, displayName: String?) {
+    public init(deviceID: String, displayName: String?, debugAuthorized: Bool) {
         self.deviceID = deviceID
         self.displayName = displayName
+        self.debugAuthorized = debugAuthorized
     }
 }
 

@@ -13,6 +13,8 @@ class DatabaseManager {
     private let queue: DispatchQueue
     private let tables: [DatabaseTable.Type]
     
+    private static let CurrentSchemaVersion: Int32 = 2
+    
     init(_ location: Connection.Location, tables: [DatabaseTable.Type]) throws {
         db = try Connection(location)
         queue = DispatchQueue(label: "DatabaseQueue") // let it be unspecified QoS for now
@@ -31,6 +33,15 @@ class DatabaseManager {
         for table in tables {
             try table.createTableIfNecessary(db)
         }
+        
+        let userVersion = db.userVersion ?? 0
+        if userVersion != 0 { // 0 means never created
+            if userVersion < 2 {
+                let addColumn = UserModel.table.addColumn(UserModel.debugAuthorized, defaultValue: false)
+                try db.run(addColumn)
+            }
+        }
+        db.userVersion = DatabaseManager.CurrentSchemaVersion
     }
     
     private var enterReadonlyStatement: Statement?
