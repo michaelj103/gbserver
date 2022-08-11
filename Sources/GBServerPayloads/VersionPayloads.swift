@@ -48,7 +48,6 @@ public typealias VersionXPCRequestPayload = CurrentVersionHTTPRequestPayload
 public typealias VersionXPCResponsePayload = CurrentVersionHTTPResponsePayload
 public typealias AddVersionXPCRequestPayload = CurrentVersionHTTPResponsePayload
 
-//TODO: can this really live here?
 public enum VersionType: Int64, Codable, CustomStringConvertible {
     case legacy = 0
     case current = 1

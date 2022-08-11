@@ -127,8 +127,12 @@ final class HTTPRequestHandler: ChannelInboundHandler {
         }
         responseFuture.whenFailure { error in
             print("Command \"\(commandName)\" encountered an error: \(error)")
-            if let _ = error as? RequestError {
-                self._sendEmptyStatus(context: context, status: .badRequest)
+            if let requestError = error as? RequestError {
+                if case .commandError(let message) = requestError {
+                    self._sendMessageStatus(context: context, status: .badRequest, customMessage: message)
+                } else {
+                    self._sendEmptyStatus(context: context, status: .badRequest)
+                }
             } else {
                 self._sendEmptyStatus(context: context, status: .internalServerError)
             }
@@ -162,6 +166,24 @@ final class HTTPRequestHandler: ChannelInboundHandler {
         _completeResponse(context, trailers: nil, promise: nil)
     }
     
+    private func _sendMessageStatus(context: ChannelHandlerContext, status: HTTPResponseStatus, customMessage: String?) {
+        var responseHead = HTTPResponseHead(version: .http1_1, status: .notFound, headers: defaultHeaders)
+        self.buffer.clear()
+        let message = "\(status.code) \(status.reasonPhrase)"
+        self.buffer.writeString(message)
+        if let customMessage = customMessage {
+            buffer.writeString("\n\(customMessage)")
+        }
+        responseHead.headers.add(name: "Content-Type", value: "text/plain; charset=UTF-8")
+        responseHead.headers.add(name: "Content-Length", value: "\(self.buffer!.readableBytes)")
+        
+        let header = HTTPServerResponsePart.head(responseHead)
+        context.write(self.wrapOutboundOut(header), promise: nil)
+        let body = HTTPServerResponsePart.body(.byteBuffer(buffer!.slice()))
+        context.write(self.wrapOutboundOut(body), promise: nil)
+        _completeResponse(context, trailers: nil, promise: nil)
+    }
+    
     private func _completeResponse(_ context: ChannelHandlerContext, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
         let writeAndFlushPromise: EventLoopPromise<Void> = context.eventLoop.makePromise()
         writeAndFlushPromise.futureResult.cascade(to: promise)
@@ -178,8 +200,9 @@ final class HTTPRequestHandler: ChannelInboundHandler {
         case unsupported
     }
     
-    private enum RequestError: Error {
+    enum RequestError: Error {
         case unsupportedHTTPMethod
+        case commandError(String?)
     }
 }
 
