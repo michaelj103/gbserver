@@ -40,7 +40,7 @@ struct ListCheckInsCommand: ServerJSONCommand {
             }
             return data
         }
-        
+                
         return responseFuture
     }
     

@@ -7,6 +7,7 @@
 
 import Foundation
 import GBServerPayloads
+import NIOCore
 
 class LinkRoomManager {
     static let sharedManager = LinkRoomManager()
@@ -19,9 +20,11 @@ class LinkRoomManager {
     private var activeParticipantKeys = [String : String]() // Key : RoomCode
     private let queue = DispatchQueue(label: "LinkRoomManager")
     
-    func runBlock(_ block: @escaping () -> Void) {
+    private var nioState = LinkRoomManagerNIOState()
+    
+    func runBlock(_ block: @escaping (LinkRoomManager) -> Void) {
         queue.async {
-            block()
+            block(self)
         }
     }
     
@@ -30,6 +33,8 @@ class LinkRoomManager {
         roomIDCounter += 1
         return next
     }
+    
+    // MARK: - Creating rooms
     
     func createRoom(_ userID: Int64) throws -> LinkRoomClientInfo {
         dispatchPrecondition(condition: .onQueue(queue))
@@ -58,7 +63,11 @@ class LinkRoomManager {
         
         // create the room!
         let roomID = _nextID()
-        let room = LinkRoom(roomID, roomCode: roomCode, ownerID: userID)
+        let room = LinkRoom(roomID, roomCode: roomCode, ownerID: userID) { [weak self] room in
+            self?.runBlock { manager in
+                manager._onQueue_roomDidClose(room)
+            }
+        }
         usersInRooms[userID] = roomCode
         activeRooms[roomCode] = room
         
@@ -67,36 +76,49 @@ class LinkRoomManager {
         return LinkRoomClientInfo(roomID: roomID, roomCode: roomCode, roomKey: .owner(keyString))
     }
     
+    // MARK: - Closing rooms
+    
     // TODO: Server command for this
+    // Close request from user with the given ID
     func closeRoom(_ userID: Int64) throws {
+        dispatchPrecondition(condition: .onQueue(queue))
         guard let roomCode = usersInRooms[userID] else {
             throw LinkRoomError.roomNotFound
         }
         
-        try closeRoom(roomCode)
-    }
-    
-    func closeRoom(_ roomCode: String) throws {
-        dispatchPrecondition(condition: .onQueue(queue))
-        
         guard let room = activeRooms[roomCode] else {
+            // This actually indicates a state management error. Users should not be marked as in a room if the room isn't active
             throw LinkRoomError.roomNotFound
         }
         
-        room.close()
-        activeRooms[roomCode] = nil
+        guard room.ownerID == userID else {
+            // Only the owner can request room closure
+            throw LinkRoomError.mustBeRoomOwner
+        }
+        
+        room.close(.userRequest)
+    }
+    
+    private func _onQueue_roomDidClose(_ room: LinkRoom) {
+        activeRooms[room.roomCode] = nil
         usersInRooms[room.ownerID] = nil
         if let participantID = room.participantID {
             usersInRooms[participantID] = nil
         }
         
         let maxExpiredRooms = 100
-        expiredRooms.append(ExpiredLinkRoom(roomID: room.roomID, roomCode: roomCode))
+        expiredRooms.append(ExpiredLinkRoom(roomID: room.roomID, roomCode: room.roomCode))
         if expiredRooms.count > maxExpiredRooms {
             let diff = expiredRooms.count - maxExpiredRooms
             expiredRooms.removeFirst(diff)
         }
+        
+        if activeRooms.isEmpty {
+            
+        }
     }
+    
+    // MARK: - Joining
     
     // Returns owner connection info to the owner
     // Returns participant connection info to a participant or first user with the code if participant is nil
@@ -163,6 +185,8 @@ class LinkRoomManager {
         return clientInfo
     }
     
+    // MARK: - Types
+    
     private struct ExpiredLinkRoom {
         let roomID: Int
         let roomCode: String
@@ -175,4 +199,59 @@ enum LinkRoomError: Error {
     case roomNotFound
     case roomExpired
     case incorrectParticipant
+    case mustBeRoomOwner
+}
+
+
+// MARK: - NIO -
+
+extension LinkRoomManager {
+    private struct LinkRoomManagerNIOState {
+        var roomCleanupTask: RepeatedTask?
+    }
+    
+    func runBlock<T>(eventLoop: NIOCore.EventLoop, block: @escaping (LinkRoomManager) throws -> T) -> EventLoopFuture<T> {
+        let promise = eventLoop.makePromise(of: T.self)
+        runBlock { manager in
+            do {
+                let result = try block(manager)
+                promise.succeed(result)
+            } catch {
+                promise.fail(error)
+            }
+        }
+        return promise.futureResult
+    }
+    
+    func ensureRoomCleanup(eventLoop: NIOCore.EventLoop) {
+        dispatchPrecondition(condition: .onQueue(queue))
+        guard nioState.roomCleanupTask == nil else {
+            // cleanup is already scheduled
+            return
+        }
+        
+        // Every 30 minutes, close inactive rooms
+        let repeatedTask = eventLoop.scheduleRepeatedTask(initialDelay: .minutes(30), delay: .minutes(30)) { [weak self] _ in
+            self?.runBlock({ manager in
+                manager._onQueue_roomCleanupEventTriggered()
+            })
+        }
+        
+        nioState.roomCleanupTask = repeatedTask
+    }
+    
+    private func _onQueue_roomCleanupEventTriggered() {
+        for (_, room) in activeRooms {
+            room.requireActivity()
+        }
+    }
+    
+    private func _onQueue_cancelRoomCleanupTask() {
+        guard let task = nioState.roomCleanupTask else {
+            return
+        }
+        
+        task.cancel()
+        nioState.roomCleanupTask = nil
+    }
 }

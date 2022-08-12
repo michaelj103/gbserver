@@ -26,7 +26,10 @@ struct CreateRoomCommand: ServerJSONCommand {
             return user.id
         }.flatMapWithEventLoop { userID, eventLoop -> EventLoopFuture<LinkRoomClientInfo> in
             sharedManager.runBlock(eventLoop: eventLoop) { linkManager -> LinkRoomClientInfo in
-                try _createRoom(linkManager, userID: userID)
+                let clientInfo = try _createRoom(linkManager, userID: userID)
+                // Make sure the room cleanup task is running
+                sharedManager.ensureRoomCleanup(eventLoop: eventLoop)
+                return clientInfo
             }
         }.flatMapThrowing { clientInfo -> Data in
             return try JSONEncoder().encode(clientInfo)
