@@ -8,13 +8,22 @@
 import Foundation
 
 class LinkRoom {
+    let roomID: Int
     let roomCode: String
     let ownerID: Int64
-    let participantID: Int64? = nil
+    private(set) var participantID: Int64? = nil
     
-    init(_ roomCode: String, ownerID: Int64) {
+    init(_ id: Int, roomCode: String, ownerID: Int64) {
+        self.roomID = id
         self.roomCode = roomCode
         self.ownerID = ownerID
+    }
+    
+    func setParticipant(_ id: Int64) throws {
+        guard participantID == nil else {
+            throw RuntimeError("Tried to reset participant ID")
+        }
+        participantID = id
     }
     
     func close() {

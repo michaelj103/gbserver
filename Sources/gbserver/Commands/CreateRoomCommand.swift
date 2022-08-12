@@ -17,54 +17,42 @@ struct CreateRoomCommand: ServerJSONCommand {
         let payload = try self.decodePayload(type: CreateRoomHTTPRequestPayload.self, data: data, decoder: decoder)
         let sharedManager = LinkRoomManager.sharedManager
         
-        context.db.asyncRead(eventLoop: context.eventLoop) { dbConnection -> Int64 in
+        let responseFuture = context.db.asyncRead(eventLoop: context.eventLoop) { dbConnection -> Int64 in
             let userQuery = QueryBuilder<UserModel>{ $0.filter(UserModel.deviceID == payload.deviceID ).limit(1) }
             guard let user = try UserModel.fetch(dbConnection, queryBuilder: userQuery).first else {
                 throw HTTPRequestHandler.RequestError.commandError("User not found")
             }
             
             return user.id
-        }.flatMapWithEventLoop { userID, eventLoop in
-            sharedManager.runBlock(eventLoop: eventLoop) { linkManager in
-                let room = linkManager.createRoom(userID)
-                room.roomCode
+        }.flatMapWithEventLoop { userID, eventLoop -> EventLoopFuture<LinkRoomClientInfo> in
+            sharedManager.runBlock(eventLoop: eventLoop) { linkManager -> LinkRoomClientInfo in
+                try _createRoom(linkManager, userID: userID)
             }
-        }
-        
-        sharedManager.runBlock(eventLoop: context.eventLoop) { linkManager in
-            linkManager.createRoom(<#T##userID: Int64##Int64#>)
-        }
-        
-        let responseFuture = context.db.asyncWrite(eventLoop: context.eventLoop) { dbConnection -> CheckInResult in
-            let userQuery = QueryBuilder<UserModel>{ $0.filter(UserModel.deviceID == payload.deviceID ).limit(1) }
-            guard let user = try UserModel.fetch(dbConnection, queryBuilder: userQuery).first else {
-                return CheckInResult.userNotFound
-            }
-            
-            let insertion = CheckInModel.InsertRecord(userID: user.id, date: now)
-            let checkInRowID = try CheckInModel.insert(dbConnection, record: insertion)
-            return .success(checkInRowID)
-        }.flatMapThrowing { checkInResult -> Data in
-            let response: GenericMessageResponse
-            switch checkInResult {
-            case .userNotFound:
-                response = .failure(message: "User Not Found")
-            case .success(_):
-                response = .success(message: "CheckIn Successful")
-            }
-            let data = try JSONEncoder().encode(response)
-            return data
+        }.flatMapThrowing { clientInfo -> Data in
+            return try JSONEncoder().encode(clientInfo)
         }
         
         return responseFuture
     }
     
-    private enum GetUserResult {
-        case userNotFound
-        case success(Int64)
-    }
-    
-    private enum CreateRoomResult {
+    private func _createRoom(_ linkManager: LinkRoomManager, userID: Int64) throws -> LinkRoomClientInfo {
+        // Catch is intentionally not exhaustive. Caught errors should be errors messaged to the user somehow as "bad request"
+        // Any other errors should be considered server-side errors and will error-out the whole thing resulting in a 5xx code
+        var message: String? = nil
+        do {
+            let clientInfo = try linkManager.createRoom(userID)
+            return clientInfo
+        } catch LinkRoomError.userAlreadyInRoom {
+            message = "User already in a room"
+        } catch LinkRoomError.roomNotFound {
+            message = "Room not found"
+        } catch LinkRoomError.roomExpired {
+            message = "Room expired"
+        } catch LinkRoomError.incorrectParticipant {
+            message = "Room is full"
+        }
         
+        // If we get here, we caught an error
+        throw HTTPRequestHandler.RequestError.commandError(message)
     }
 }

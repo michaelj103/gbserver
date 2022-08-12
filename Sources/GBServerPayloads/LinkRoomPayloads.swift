@@ -22,3 +22,21 @@ public struct CreateRoomHTTPRequestPayload: Codable {
         clientInfo = ClientInfo()
     }
 }
+
+public enum LinkRoomKey: Codable {
+    case owner(String)
+    case participant(String)
+}
+
+public struct LinkRoomClientInfo: Codable {
+    public let roomID: Int
+    public let roomCode: String
+    public let roomKey: LinkRoomKey
+    
+    public init(roomID: Int, roomCode: String, roomKey: LinkRoomKey) {
+        self.roomID = roomID
+        self.roomCode = roomCode
+        self.roomKey = roomKey
+    }
+}
+
