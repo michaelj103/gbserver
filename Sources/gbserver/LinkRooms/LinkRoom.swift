@@ -27,6 +27,6 @@ class LinkRoom {
     }
     
     func close() {
-        
+        // probably dispatch_sync on internal queue
     }
 }

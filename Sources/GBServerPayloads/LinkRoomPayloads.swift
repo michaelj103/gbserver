@@ -23,6 +23,20 @@ public struct CreateRoomHTTPRequestPayload: Codable {
     }
 }
 
+public struct JoinRoomHTTPRequestPayload: Codable {
+    public let deviceID: String
+    public let roomCode: String
+    
+    public let clientInfo: ClientInfo?
+    
+    public init(deviceID: String, roomCode: String) {
+        self.deviceID = deviceID
+        self.roomCode = roomCode
+        
+        clientInfo = ClientInfo()
+    }
+}
+
 public enum LinkRoomKey: Codable {
     case owner(String)
     case participant(String)

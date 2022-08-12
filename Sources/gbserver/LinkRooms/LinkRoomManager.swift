@@ -67,6 +67,15 @@ class LinkRoomManager {
         return LinkRoomClientInfo(roomID: roomID, roomCode: roomCode, roomKey: .owner(keyString))
     }
     
+    // TODO: Server command for this
+    func closeRoom(_ userID: Int64) throws {
+        guard let roomCode = usersInRooms[userID] else {
+            throw LinkRoomError.roomNotFound
+        }
+        
+        try closeRoom(roomCode)
+    }
+    
     func closeRoom(_ roomCode: String) throws {
         dispatchPrecondition(condition: .onQueue(queue))
         
@@ -91,7 +100,7 @@ class LinkRoomManager {
     
     // Returns owner connection info to the owner
     // Returns participant connection info to a participant or first user with the code if participant is nil
-    func getRoomConnectionInfo(_ userID: Int64, roomCode: String) throws -> LinkRoomClientInfo {
+    func joinRoom(_ userID: Int64, roomCode: String) throws -> LinkRoomClientInfo {
         dispatchPrecondition(condition: .onQueue(queue))
         guard let room = activeRooms[roomCode] else {
             if expiredRooms.contains(where: { $0.roomCode == roomCode }) {
@@ -99,6 +108,13 @@ class LinkRoomManager {
             } else {
                 throw LinkRoomError.roomNotFound
             }
+        }
+        
+        // If the user is already in a room and it isn't this one, error
+        // If they aren't in a room they'll join this one below
+        // If they're in this room already, they'll get fresh connection info
+        if let alreadyInRoom = usersInRooms[userID], alreadyInRoom != room.roomCode {
+            throw LinkRoomError.userAlreadyInRoom
         }
         
         let key: LinkRoomKey
@@ -115,6 +131,7 @@ class LinkRoomManager {
             } else {
                 // claim the particpant slot for this user
                 try room.setParticipant(userID)
+                usersInRooms[userID] = room.roomCode
             }
             
             // The user is the participant
@@ -130,6 +147,20 @@ class LinkRoomManager {
         }
         
         return LinkRoomClientInfo(roomID: room.roomID, roomCode: room.roomCode, roomKey: key)
+    }
+    
+    // TODO: Server command for this
+    // Gets info for connecting to any active room that the user is currently a member of
+    // Should never throw. If it does, indicates an internal state error
+    func getCurrentRoom(_ userID: Int64) throws -> LinkRoomClientInfo? {
+        let clientInfo: LinkRoomClientInfo?
+        if let roomCode = usersInRooms[userID] {
+            // "Join" the room. Should just generate fresh connection info since the user is already joined
+            clientInfo = try joinRoom(userID, roomCode: roomCode)
+        } else {
+            clientInfo = nil
+        }
+        return clientInfo
     }
     
     private struct ExpiredLinkRoom {
