@@ -34,16 +34,20 @@ class LinkRoom {
         }
     }
     
-    private var closed = false
     func close(_ reason: RoomCloseReason) {
-        queue.async {
-            if self.closed {
-                return
-            }
-            self.closed = true
-            print("Closing room \(self.roomID) for reason: \(reason))")
-            self.closeHandler(self)
+        queue.sync {
+            _onQueue_close(reason)
         }
+    }
+    
+    private var closed = false
+    private func _onQueue_close(_ reason: RoomCloseReason) {
+        if self.closed {
+            return
+        }
+        self.closed = true
+        print("Closing room \(self.roomID) for reason: \(reason))")
+        self.closeHandler(self)
     }
     
     // MARK: - Tracking room inactivity
@@ -59,7 +63,7 @@ class LinkRoom {
             let wasActive = self.isActive
             self.isActive = false
             if !wasActive {
-                self.close(.inactive)
+                self._onQueue_close(.inactive)
             }
         }
     }
