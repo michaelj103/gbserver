@@ -44,6 +44,16 @@ let package = Package(
                            "GBServerPayloads",
             ]
         ),
+        .executableTarget(
+            name: "gbserverclient",
+            dependencies: [ .product(name: "NIO", package: "swift-nio"),
+                            .product(name: "NIOFoundationCompat", package: "swift-nio"),
+                            .product(name: "NIOHTTP1", package: "swift-nio"),
+                            .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
+                            .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                            "GBServerPayloads",
+            ]
+        ),
         .target(name: "GBServerPayloads"),
     ]
 )

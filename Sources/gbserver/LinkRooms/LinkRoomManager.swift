@@ -114,7 +114,7 @@ class LinkRoomManager {
         }
         
         if activeRooms.isEmpty {
-            
+            _onQueue_cancelRoomCleanupTask()
         }
     }
     
