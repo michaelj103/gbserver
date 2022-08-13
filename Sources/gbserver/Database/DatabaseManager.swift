@@ -115,9 +115,7 @@ class DatabaseManager {
                 var result: T?
                 try throwingFirstError {
                     try self.beginReadonly()
-                    try db.savepoint {
-                        result = try value(db)
-                    }
+                    result = try value(db)
                 } finally: {
                     try self.endReadonly()
                 }

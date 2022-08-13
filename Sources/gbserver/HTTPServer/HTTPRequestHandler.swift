@@ -152,7 +152,7 @@ final class HTTPRequestHandler: ChannelInboundHandler {
     }
     
     private func _sendEmptyStatus(context: ChannelHandlerContext, status: HTTPResponseStatus) {
-        var responseHead = HTTPResponseHead(version: .http1_1, status: .notFound, headers: defaultHeaders)
+        var responseHead = HTTPResponseHead(version: .http1_1, status: status, headers: defaultHeaders)
         self.buffer.clear()
         let message = "\(status.code) \(status.reasonPhrase)"
         self.buffer.writeString(message)
@@ -167,7 +167,7 @@ final class HTTPRequestHandler: ChannelInboundHandler {
     }
     
     private func _sendMessageStatus(context: ChannelHandlerContext, status: HTTPResponseStatus, customMessage: String?) {
-        var responseHead = HTTPResponseHead(version: .http1_1, status: .notFound, headers: defaultHeaders)
+        var responseHead = HTTPResponseHead(version: .http1_1, status: status, headers: defaultHeaders)
         self.buffer.clear()
         let message = "\(status.code) \(status.reasonPhrase)"
         self.buffer.writeString(message)
