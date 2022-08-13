@@ -64,6 +64,7 @@ fileprivate extension GBServerCTL.UserCommand {
                 print("   name: \"\(payload.printableDisplayName)\"")
                 print("   deviceID: \(payload.deviceID)")
                 print("   debugAuthorized: \(payload.debugAuthorized)")
+                print("   createRoomAuthorized: \(payload.createRoomAuthorized)")
             }
         }
         
@@ -152,6 +153,9 @@ fileprivate extension GBServerCTL.UserCommand {
         @Option(help: "Toggle debug authorization to 'true' or 'false'")
         var setDebugAuthorized: Bool?
         
+        @Option(help: "Toggle create room authorization to 'true' or 'false'")
+        var setCreateRoomAuthorized: Bool?
+        
         func validate() throws {
             if displayName != nil && deleteDisplayName {
                 throw CommandError("Can't both set and delete a display name")
@@ -171,7 +175,8 @@ fileprivate extension GBServerCTL.UserCommand {
                 displayNameUpdate = nil
             }
             let debugAuthUpdate: Bool? = setDebugAuthorized
-            let request = UpdateUserXPCRequest(deviceID: deviceID, displayName: displayNameUpdate, debugAuthorized: debugAuthUpdate)
+            let createRoomAuthUpdate: Bool? = setCreateRoomAuthorized
+            let request = UpdateUserXPCRequest(deviceID: deviceID, displayName: displayNameUpdate, debugAuthorized: debugAuthUpdate, createRoomAuthorized: createRoomAuthUpdate)
             
             if !request.hasUpdates() {
                 throw CommandError("Nothing to do")
@@ -205,8 +210,8 @@ fileprivate extension GBServerCTL.UserCommand {
             let name = "updateUser"
             let payload: UpdateUserXPCRequestPayload
             
-            init(deviceID: String, displayName: NullablePropertyWrapper<String>?, debugAuthorized: Bool?) {
-                payload = UpdateUserXPCRequestPayload(deviceID: deviceID, displayName: displayName, debugAuthorized: debugAuthorized)
+            init(deviceID: String, displayName: NullablePropertyWrapper<String>?, debugAuthorized: Bool?, createRoomAuthorized: Bool?) {
+                payload = UpdateUserXPCRequestPayload(deviceID: deviceID, displayName: displayName, debugAuthorized: debugAuthorized, createRoomAuthorized: createRoomAuthorized)
             }
             
             func hasUpdates() -> Bool {
@@ -214,6 +219,9 @@ fileprivate extension GBServerCTL.UserCommand {
                     return true
                 }
                 if payload.updatedDebugAuthorization != nil {
+                    return true
+                }
+                if payload.updateCreateRoomAuthorization != nil {
                     return true
                 }
                 return false

@@ -22,6 +22,9 @@ struct CreateRoomCommand: ServerJSONCommand {
             guard let user = try UserModel.fetch(dbConnection, queryBuilder: userQuery).first else {
                 throw HTTPRequestHandler.RequestError.commandError("User not found")
             }
+            if !user.createRoomAuthorized {
+                throw HTTPRequestHandler.RequestError.commandError("User isn't authorized to create rooms")
+            }
             
             return user.id
         }.flatMapWithEventLoop { userID, eventLoop -> EventLoopFuture<LinkRoomClientInfo> in

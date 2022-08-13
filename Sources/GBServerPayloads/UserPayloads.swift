@@ -37,15 +37,17 @@ public struct ListUsersXPCResponsePayload: Codable {
     public let deviceID: String
     public let displayName: String?
     public let debugAuthorized: Bool
+    public let createRoomAuthorized: Bool
         
     public var printableDisplayName: String {
         return displayName ?? "<Null>"
     }
     
-    public init(deviceID: String, displayName: String?, debugAuthorized: Bool) {
+    public init(deviceID: String, displayName: String?, debugAuthorized: Bool, createRoomAuthorized: Bool) {
         self.deviceID = deviceID
         self.displayName = displayName
         self.debugAuthorized = debugAuthorized
+        self.createRoomAuthorized = createRoomAuthorized
     }
 }
 
@@ -72,13 +74,15 @@ public struct UpdateUserXPCRequestPayload: Codable {
     // mutable properties
     public let updatedName: NullablePropertyWrapper<String>?
     public let updatedDebugAuthorization: Bool?
+    public let updateCreateRoomAuthorization: Bool?
     
     public let clientInfo: ClientInfo?
         
-    public init(deviceID: String, displayName: NullablePropertyWrapper<String>?, debugAuthorized: Bool?) {
+    public init(deviceID: String, displayName: NullablePropertyWrapper<String>?, debugAuthorized: Bool?, createRoomAuthorized: Bool?) {
         self.deviceID = deviceID
         self.updatedName = displayName
         self.updatedDebugAuthorization = debugAuthorized
+        self.updateCreateRoomAuthorization = createRoomAuthorized
         
         self.clientInfo = ClientInfo()
     }

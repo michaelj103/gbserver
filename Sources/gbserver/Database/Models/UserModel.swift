@@ -13,12 +13,14 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, Database
     let deviceID: String
     let displayName: String?
     let debugAuthorized: Bool
+    let createRoomAuthorized: Bool
     
     static let table = Table("Users")
     static let id = Expression<Int64>("id")
     static let deviceID = Expression<String>("deviceID")
     static let displayName = Expression<String?>("displayName")
     static let debugAuthorized = Expression<Bool>("debugAuthorized")
+    static let createRoomAuthorized = Expression<Bool>("createRoomAuthorized")
     
     static func createTableIfNecessary(_ db: Connection) throws {
         let userCreation = table.create(temporary: false, ifNotExists: true, withoutRowid: false) { builder in
@@ -26,6 +28,7 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, Database
             builder.column(deviceID, unique: true)
             builder.column(displayName, unique: true)
             builder.column(debugAuthorized, defaultValue: false)
+            builder.column(createRoomAuthorized, defaultValue: false)
         }
 
         try db.run(userCreation)
@@ -37,7 +40,7 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, Database
         let query = queryBuilder.query
         let rowIterator = try db.prepareRowIterator(query)
         let entries: [UserModel] = try rowIterator.map({ element in
-            let entry = UserModel(id: element[id], deviceID: element[deviceID], displayName: element[displayName], debugAuthorized: element[debugAuthorized])
+            let entry = UserModel(id: element[id], deviceID: element[deviceID], displayName: element[displayName], debugAuthorized: element[debugAuthorized], createRoomAuthorized: element[createRoomAuthorized])
             return entry
         })
         return entries
@@ -53,7 +56,7 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, Database
     
     @discardableResult
     static func insert(_ db: Connection, record: InsertRecord) throws -> Int64 {
-        let insertion = table.insert(deviceID <- record.deviceID, displayName <- record.name, debugAuthorized <- false)
+        let insertion = table.insert(deviceID <- record.deviceID, displayName <- record.name, debugAuthorized <- false, createRoomAuthorized <- false)
         let insertedRowID = try db.run(insertion)
         return insertedRowID
     }
@@ -64,11 +67,12 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, Database
     struct UserUpdate {
         let updatedDisplayName: NullablePropertyWrapper<String>?
         let updatedDebugAuthorizedValue: Bool?
+        let updateCreateRoomAuthorizedValue: Bool?
         
-        // update only display name
-        init(displayName: NullablePropertyWrapper<String>?, debugAuthorized: Bool?) {
+        init(displayName: NullablePropertyWrapper<String>?, debugAuthorized: Bool?, createRoomAuthorized: Bool?) {
             self.updatedDisplayName = displayName
             self.updatedDebugAuthorizedValue = debugAuthorized
+            self.updateCreateRoomAuthorizedValue = createRoomAuthorized
         }
     }
     
@@ -79,6 +83,9 @@ struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, Database
         }
         if let debugAuth = record.updatedDebugAuthorizedValue {
             setters.append(debugAuthorized <- debugAuth)
+        }
+        if let createRoomAuth = record.updateCreateRoomAuthorizedValue {
+            setters.append(createRoomAuthorized <- createRoomAuth)
         }
         
         if setters.isEmpty {

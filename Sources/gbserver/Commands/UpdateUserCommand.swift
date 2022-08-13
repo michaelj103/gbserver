@@ -23,7 +23,7 @@ struct UpdateUserCommand: ServerJSONCommand {
                 return .noMatchingUsers
             }
             
-            let update = UserModel.UpdateRecord(displayName: payload.updatedName, debugAuthorized: payload.updatedDebugAuthorization)
+            let update = UserModel.UpdateRecord(displayName: payload.updatedName, debugAuthorized: payload.updatedDebugAuthorization, createRoomAuthorized: payload.updateCreateRoomAuthorization)
             let updatedRowCount = try UserModel.update(dbConnection, query: userFetch, record: update)
             if updatedRowCount == 0 {
                 return .noMatchingUsers
