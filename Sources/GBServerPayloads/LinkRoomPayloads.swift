@@ -46,11 +46,13 @@ public struct LinkRoomClientInfo: Codable {
     public let roomID: Int
     public let roomCode: String
     public let roomKey: LinkRoomKey
+    public let linkPort: Int
     
-    public init(roomID: Int, roomCode: String, roomKey: LinkRoomKey) {
+    public init(roomID: Int, roomCode: String, roomKey: LinkRoomKey, linkPort: Int) {
         self.roomID = roomID
         self.roomCode = roomCode
         self.roomKey = roomKey
+        self.linkPort = linkPort
     }
 }
 

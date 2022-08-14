@@ -50,6 +50,8 @@ struct CreateRoomCommand: ServerJSONCommand {
             return clientInfo
         } catch LinkRoomError.userAlreadyInRoom {
             message = "User already in a room"
+        } catch LinkRoomError.linkServerNotRunning {
+            message = "The link server isn't running"
         }
         
         // If we get here, we caught an error

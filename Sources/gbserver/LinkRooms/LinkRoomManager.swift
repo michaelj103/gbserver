@@ -20,6 +20,7 @@ class LinkRoomManager {
     private var activeParticipantKeys = [String : String]() // Key : RoomCode
     private let queue = DispatchQueue(label: "LinkRoomManager")
     
+    private var listeningPort: Int?
     private var nioState = LinkRoomManagerNIOState()
     
     func runBlock(_ block: @escaping (LinkRoomManager) -> Void) {
@@ -41,6 +42,10 @@ class LinkRoomManager {
         
         guard usersInRooms[userID] == nil else {
             throw LinkRoomError.userAlreadyInRoom
+        }
+        
+        guard let port = listeningPort else {
+            throw LinkRoomError.linkServerNotRunning
         }
         
         let maxCodeAttempts = 5
@@ -73,7 +78,7 @@ class LinkRoomManager {
         
         let keyString = KeyGenerator.generateKey(size: .bits128, encoding: .base64)
         activeOwnerKeys[keyString] = roomCode
-        return LinkRoomClientInfo(roomID: roomID, roomCode: roomCode, roomKey: .owner(keyString))
+        return LinkRoomClientInfo(roomID: roomID, roomCode: roomCode, roomKey: .owner(keyString), linkPort: port)
     }
     
     // MARK: - Closing rooms
@@ -132,6 +137,10 @@ class LinkRoomManager {
             }
         }
         
+        guard let port = listeningPort else {
+            throw LinkRoomError.linkServerNotRunning
+        }
+        
         // If the user is already in a room and it isn't this one, error
         // If they aren't in a room they'll join this one below
         // If they're in this room already, they'll get fresh connection info
@@ -168,7 +177,7 @@ class LinkRoomManager {
             activeParticipantKeys[string] = roomCode
         }
         
-        return LinkRoomClientInfo(roomID: room.roomID, roomCode: room.roomCode, roomKey: key)
+        return LinkRoomClientInfo(roomID: room.roomID, roomCode: room.roomCode, roomKey: key, linkPort: port)
     }
     
     // TODO: Server command for this
@@ -195,6 +204,7 @@ class LinkRoomManager {
 
 enum LinkRoomError: Error {
     case userAlreadyInRoom
+    case linkServerNotRunning
     case duplicateRoomCode
     case roomNotFound
     case roomExpired

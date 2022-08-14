@@ -19,11 +19,14 @@ struct GBServer: ParsableCommand {
     @Option(name: .shortAndLong, help: "Host to bind to for listening. Defaults to \"localhost\"")
     var host: String = "localhost"
     
-    @Option(name: .shortAndLong, help: "Port to listen on. Defaults to 8080")
+    @Option(name: .shortAndLong, help: "Port to listen on for HTTP requests. Defaults to 8080")
     var port: Int = 8080
     
     @Option(name: .shortAndLong, help: "Path to a sqlite3 database. Defaults to nil (in memory)")
     var databasePath: String?
+    
+    @Option(help: "Port to listen on for Link Server requests. If not specified, no link server will start")
+    var linkPort: Int?
         
     mutating func run() throws {
         let database = try _setupDatabase()
@@ -32,10 +35,12 @@ struct GBServer: ParsableCommand {
         let serverCloseFuture = try httpServerConfig.startHTTPServer(threadGroup: group, database: database)
         let xpcServerConfig = XPCServerConfiguration(socketPath: "/tmp/com.mjb.gbserver")
         let xpcCloseFuture = try xpcServerConfig.startXPCServer(threadGroup: group, database: database)
+        let linkServerConfig = LinkServerConfiguration(host: host, port: linkPort)
+        let linkServerCloseFuture = try linkServerConfig.startLinkServer(threadGroup: group)
         
         // When the server channels close, try to shut down gracefully. Doesn't matter if we crash since
         // we're exiting anyway. This won't ever actually happen since we currently have no exit conditions
-        serverCloseFuture.and(xpcCloseFuture).whenComplete { _ in
+        serverCloseFuture.and(xpcCloseFuture).and(linkServerCloseFuture).whenComplete { _ in
             try! group.syncShutdownGracefully()
         }
         
@@ -69,3 +74,8 @@ struct GBServer: ParsableCommand {
         return database
     }
 }
+
+extension EventLoopFuture {
+    
+}
+
