@@ -42,6 +42,7 @@ struct LinkServerConfiguration {
             throw RuntimeError("Unable to bind address for listening (LinkServer)")
         }
         
+        LinkRoomManager.sharedManager.setServerPort(port)
         print("Link server started and listening on \"\(localAddress)")
         
         return channel.closeFuture

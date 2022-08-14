@@ -22,12 +22,15 @@ extension GBServerClient {
 
 fileprivate extension GBServerClient.RoomCommand {
     struct Create: ParsableCommand {
+        @Option(name: .shortAndLong, help: "Device ID of requesting user")
+        var deviceID: String
+        
         mutating func run() throws {
             let session = HTTPSession(host: "localhost", port: 8080)
             session.keepAlive()
             
             let connection = try session.makeConnection()
-            let payload = CreateRoomHTTPRequestPayload(deviceID: "abcdefg")
+            let payload = CreateRoomHTTPRequestPayload(deviceID: deviceID)
             let data = try JSONEncoder().encode(payload)
             
             var headerFields = HTTPHeaders()

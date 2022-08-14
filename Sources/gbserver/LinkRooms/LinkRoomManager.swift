@@ -29,6 +29,10 @@ class LinkRoomManager {
         }
     }
     
+    func setServerPort(_ port: Int) {
+        listeningPort = port
+    }
+    
     private func _nextID() -> Int {
         let next = roomIDCounter
         roomIDCounter += 1
