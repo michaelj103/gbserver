@@ -64,14 +64,21 @@ class XPCConnection {
         self.encoder = encoder
     }
     
+    private var receivedAnyResponse = false
     private var responseHandler: ((Result<Data, Error>) -> ())?
     func sendRequest<T: XPCRequest>(_ request: T, responseHandler: @escaping (Result<Data,Error>)->()) throws {
-        self.responseHandler = responseHandler
+        self.responseHandler = { [weak self] localResponse in
+            self?.receivedAnyResponse = true
+            responseHandler(localResponse)
+        }
         var buffer = channel.allocator.buffer(capacity: 0)
         try request.encode(with: encoder, to: &buffer)
         try channel.writeAndFlush(buffer.slice()).wait()
         try channel.closeFuture.wait()
         self.responseHandler = nil
+        if !receivedAnyResponse {
+            print("Connection closed without response (server crash?)")
+        }
     }
 }
 
