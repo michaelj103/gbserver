@@ -7,7 +7,7 @@
 
 import NIOCore
 
-struct LinkServerConnectCommandDecoder: LinkCommandDecoder {
+struct LinkServerConnectCommandDecoder: LinkServerCommandDecoder {
     // Always 22. 128 bit keys, base64 encoded -> 22 characters
     private static let MessageLength = 22
     
@@ -18,7 +18,7 @@ struct LinkServerConnectCommandDecoder: LinkCommandDecoder {
     
     func decodeMessage(buffer: inout ByteBuffer) throws -> LinkServerMessage {
         guard let key = buffer.readString(length: LinkServerConnectCommandDecoder.MessageLength) else {
-            throw LinkServerMessageDecoder.DecodeError.missingBytes
+            throw LinkMessageDecodeError.missingBytes
         }
         
         return .connect(key)

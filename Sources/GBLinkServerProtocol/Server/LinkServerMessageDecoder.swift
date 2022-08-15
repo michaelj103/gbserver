@@ -15,9 +15,7 @@ public enum LinkServerMessage {
 public final class LinkServerMessageDecoder: ByteToMessageDecoder {
     public typealias InboundOut = LinkServerMessage
     
-    public init() {
-        
-    }
+    public init() {}
     
     private var decoderState = MessageDecoderState.waitingForCommand
     
@@ -51,16 +49,16 @@ public final class LinkServerMessageDecoder: ByteToMessageDecoder {
         }
     }
     
-    private func _getCommand(buffer: inout ByteBuffer) throws -> LinkCommandDecoder? {
+    private func _getCommand(buffer: inout ByteBuffer) throws -> LinkServerCommandDecoder? {
         guard let byte = buffer.readBytes(length: 1)?.first else {
             return nil
         }
         
         guard let command = LinkServerCommand(rawValue: byte) else {
-            throw DecodeError.unrecognizedCommand
+            throw LinkMessageDecodeError.unrecognizedCommand
         }
         
-        let decoder: LinkCommandDecoder
+        let decoder: LinkServerCommandDecoder
         switch command {
         case .connect:
             decoder = LinkServerConnectCommandDecoder()
@@ -71,12 +69,7 @@ public final class LinkServerMessageDecoder: ByteToMessageDecoder {
     
     private enum MessageDecoderState {
         case waitingForCommand
-        case waitingForLength(LinkCommandDecoder)
-        case decodingCommand(Int, LinkCommandDecoder)
-    }
-    
-    public enum DecodeError: Error {
-        case unrecognizedCommand
-        case missingBytes
+        case waitingForLength(LinkServerCommandDecoder)
+        case decodingCommand(Int, LinkServerCommandDecoder)
     }
 }
