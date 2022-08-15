@@ -49,9 +49,8 @@ struct LinkServerConfiguration {
     }
     
     private static func _childChannelInitializer(_ channel: Channel) -> EventLoopFuture<Void> {
-        channel.pipeline.addHandler(LinkServerRequestHandler())
-//        channel.pipeline.addHandler(ByteToMessageHandler(XPCMessageDecoder())).flatMap { _ in
-//            channel.pipeline.addHandler(XPCRequestHandler(database, commandCenter: commandCenter))
-//        }
+        channel.pipeline.addHandler(ByteToMessageHandler(LinkServerMessageDecoder())).flatMap { _ in
+            channel.pipeline.addHandler(LinkServerRequestHandler())
+        }
     }
 }

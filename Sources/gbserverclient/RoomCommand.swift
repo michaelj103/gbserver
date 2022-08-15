@@ -69,7 +69,8 @@ fileprivate extension GBServerClient.RoomCommand {
             session.keepAlive()
             let connection = try session.makeConnection()
             
-            connection.write([0, 1, 2, 3, 4, 5, 6])
+            let bytes = code.map { $0.asciiValue! }
+            connection.write([1] + bytes)
             
             connection.setCloseCallback { _ in
                 session.stopKeepAlive()

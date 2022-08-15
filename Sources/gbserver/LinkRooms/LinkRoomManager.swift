@@ -12,13 +12,16 @@ import NIOCore
 class LinkRoomManager {
     static let sharedManager = LinkRoomManager()
     
+    private let queue = DispatchQueue(label: "LinkRoomManager")
     private var roomIDCounter = 0
     private var activeRooms = [String : LinkRoom]() // RoomCode : Room
     private var expiredRooms = [ExpiredLinkRoom]() // (RoomID, RoomCode) for lookup via either channel
     private var usersInRooms = [Int64 : String]() // UserID : RoomCode
+    
+    // Key management
+    private var allKeysByRoom = [String: Set<String>]() // RoomCode : Keys
     private var activeOwnerKeys = [String : String]() // Key : RoomCode
     private var activeParticipantKeys = [String : String]() // Key : RoomCode
-    private let queue = DispatchQueue(label: "LinkRoomManager")
     
     private var listeningPort: Int?
     private var nioState = LinkRoomManagerNIOState()
@@ -81,7 +84,7 @@ class LinkRoomManager {
         activeRooms[roomCode] = room
         
         let keyString = KeyGenerator.generateKey(size: .bits128, encoding: .base64)
-        activeOwnerKeys[keyString] = roomCode
+        _onQueue_addKey(.owner(keyString), roomCode: roomCode)
         return LinkRoomClientInfo(roomID: roomID, roomCode: roomCode, roomKey: .owner(keyString), linkPort: port)
     }
     
@@ -114,6 +117,8 @@ class LinkRoomManager {
         if let participantID = room.participantID {
             usersInRooms[participantID] = nil
         }
+        // remove all the keys for accessing this room
+        _onQueue_removeKeys(room.roomCode)
         
         let maxExpiredRooms = 100
         expiredRooms.append(ExpiredLinkRoom(roomID: room.roomID, roomCode: room.roomCode))
@@ -171,16 +176,10 @@ class LinkRoomManager {
             
             // The user is the participant
             let keyString = KeyGenerator.generateKey(size: .bits128, encoding: .base64)
-            key = .owner(keyString)
+            key = .participant(keyString)
         }
         
-        switch key {
-        case .owner(let string):
-            activeOwnerKeys[string] = roomCode
-        case .participant(let string):
-            activeParticipantKeys[string] = roomCode
-        }
-        
+        _onQueue_addKey(key, roomCode: roomCode)
         return LinkRoomClientInfo(roomID: room.roomID, roomCode: room.roomCode, roomKey: key, linkPort: port)
     }
     
@@ -188,6 +187,7 @@ class LinkRoomManager {
     // Gets info for connecting to any active room that the user is currently a member of
     // Should never throw. If it does, indicates an internal state error
     func getCurrentRoom(_ userID: Int64) throws -> LinkRoomClientInfo? {
+        dispatchPrecondition(condition: .onQueue(queue))
         let clientInfo: LinkRoomClientInfo?
         if let roomCode = usersInRooms[userID] {
             // "Join" the room. Should just generate fresh connection info since the user is already joined
@@ -198,6 +198,64 @@ class LinkRoomManager {
         return clientInfo
     }
     
+    // MARK: - Connecting
+    
+    func roomForConnectionWithKey(_ key: String) throws -> (LinkRoom, LinkRoom.ClientType) {
+        dispatchPrecondition(condition: .onQueue(queue))
+        guard let (roomCode, clientType) = _onQueue_useRoomKey(key) else {
+            throw LinkRoomError.roomNotFound
+        }
+        guard let room = activeRooms[roomCode] else {
+            throw LinkRoomError.roomNotFound
+        }
+        
+        return (room, clientType)
+    }
+    
+    
+    // MARK: - Key management
+    private func _onQueue_addKey(_ key: LinkRoomKey, roomCode: String) {
+        switch key {
+        case .owner(let keyString):
+            activeOwnerKeys[keyString] = roomCode
+            allKeysByRoom[roomCode, default: []].insert(keyString)
+        case .participant(let keyString):
+            activeParticipantKeys[keyString] = roomCode
+            allKeysByRoom[roomCode, default: []].insert(keyString)
+        }
+    }
+    
+    // Remove all keys for a room, e.g. when closing
+    private func _onQueue_removeKeys(_ roomCode: String) {
+        if let allKeys = allKeysByRoom.removeValue(forKey: roomCode) {
+            for key in allKeys {
+                activeOwnerKeys.removeValue(forKey: key)
+                activeParticipantKeys.removeValue(forKey: key)
+            }
+        }
+    }
+    
+    private func _onQueue_useRoomKey(_ key: String) -> (String, LinkRoom.ClientType)? {
+        let roomCode: String?
+        let clientType: LinkRoom.ClientType?
+        if let ownerRoomCode = activeOwnerKeys.removeValue(forKey: key) {
+            roomCode = ownerRoomCode
+            clientType = .owner
+        } else if let participantRoomCode = activeParticipantKeys.removeValue(forKey: key) {
+            roomCode = participantRoomCode
+            clientType = .participant
+        } else {
+            roomCode = nil
+            clientType = nil
+        }
+        if let roomCode = roomCode, let clientType = clientType {
+            allKeysByRoom[roomCode]?.remove(key)
+            return (roomCode, clientType)
+        } else {
+            return nil
+        }
+    }
+        
     // MARK: - Types
     
     private struct ExpiredLinkRoom {
