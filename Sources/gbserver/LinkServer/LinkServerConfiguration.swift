@@ -35,7 +35,6 @@ struct LinkServerConfiguration {
             // Enable SO_REUSEADDR for the accepted Channels
             .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
         
         let channel = try socketBootstrap.bind(host: host, port: port).wait()
         

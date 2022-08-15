@@ -10,9 +10,10 @@ import NIOCore
 import NIOPosix
 import NIOHTTP1
 import NIOFoundationCompat
+import GBLinkServerProtocol
 
 class LinkClientHandler: ChannelInboundHandler {
-    public typealias InboundIn = ByteBuffer
+    public typealias InboundIn = LinkClientMessage
     public typealias OutboundOut = ByteBuffer
     private var sendBytes = 0
     private var receiveBuffer: ByteBuffer = ByteBuffer()
@@ -23,7 +24,11 @@ class LinkClientHandler: ChannelInboundHandler {
     }
     
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        // No reads, yet
+        let message = unwrapInboundIn(data)
+        switch message {
+        case .didConnect:
+            print("Received didConnect message")
+        }
     }
     
     public func errorCaught(context: ChannelHandlerContext, error: Error) {

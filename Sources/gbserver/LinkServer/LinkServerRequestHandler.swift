@@ -87,6 +87,9 @@ class LinkServerRequestHandler: ChannelInboundHandler {
         switch result {
         case .success(let room):
             connectedRoom = room
+            let buffer = ByteBuffer(data: LinkClientCommand.didConnect.asData())
+            context.channel.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+            
         case .failure(let error):
             print("Failed to connect to a room with error \(error)")
             context.close(promise: nil)

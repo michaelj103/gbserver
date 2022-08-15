@@ -53,6 +53,7 @@ let package = Package(
                             .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
                             .product(name: "ArgumentParser", package: "swift-argument-parser"),
                             "GBServerPayloads",
+                            "GBLinkServerProtocol",
             ]
         ),
         .target(name: "GBServerPayloads"),

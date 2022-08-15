@@ -20,31 +20,42 @@ public final class LinkServerMessageDecoder: ByteToMessageDecoder {
     private var decoderState = MessageDecoderState.waitingForCommand
     
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        while true {
+            let canContinue = try _internalDecodeStep(context: context, buffer: &buffer)
+            if !canContinue {
+                break
+            }
+        }
+        
+        return .needMoreData
+    }
+    
+    private func _internalDecodeStep(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> Bool {
         switch decoderState {
         case .waitingForCommand:
             if let decoder = try _getCommand(buffer: &buffer) {
                 decoderState = .waitingForLength(decoder)
-                return .continue
+                return true
             } else {
-                return .needMoreData
+                return false
             }
         case .waitingForLength(let decoder):
             let lengthFieldSize = decoder.lengthFieldSize
             if buffer.readableBytes >= lengthFieldSize {
                 let messageLength = try decoder.messageLength(buffer: &buffer)
                 decoderState = .decodingCommand(messageLength, decoder)
-                return .continue
+                return true
             } else {
-                return .needMoreData
+                return false
             }
         case .decodingCommand(let requiredLength, let decoder):
             if buffer.readableBytes >= requiredLength {
                 let message = try decoder.decodeMessage(buffer: &buffer)
                 context.fireChannelRead(self.wrapInboundOut(message))
                 decoderState = .waitingForCommand
-                return .continue
+                return true
             } else {
-                return .needMoreData
+                return false
             }
         }
     }

@@ -10,6 +10,7 @@ import NIOCore
 import NIOPosix
 import NIOHTTP1
 import NIOConcurrencyHelpers
+import GBLinkServerProtocol
 
 class LinkClientSession {
     private let threadGroup: MultiThreadedEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -17,9 +18,12 @@ class LinkClientSession {
         ClientBootstrap(group: threadGroup)
             // Enable SO_REUSEADDR.
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .channelOption(ChannelOptions.maxMessagesPerRead, value: 16)
             .channelInitializer { [weak self] channel in
                 if let pendingConnection = self?.getConnection() {
-                    return channel.pipeline.addHandler(LinkClientHandler(pendingConnection))
+                    return channel.pipeline.addHandler(ByteToMessageHandler(LinkClientMessageDecoder())).flatMap { _ in
+                        channel.pipeline.addHandler(LinkClientHandler(pendingConnection))
+                    }
                 } else {
                     return channel.eventLoop.makeFailedFuture(SessionError.noPendingConnection)
                 }
