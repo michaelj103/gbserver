@@ -53,15 +53,23 @@ class HTTPRequestHandler: ChannelInboundHandler {
         channelContext.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
     }
     
+    private var header: HTTPResponseHead? = nil
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let clientResponse = self.unwrapInboundIn(data)
         
         switch clientResponse {
         case .head(let responseHead):
             print("Received status: \(responseHead.status)")
+            self.header = responseHead
         case .body(let byteBuffer):
-            let string = String(buffer: byteBuffer)
-            print("Received: '\(string)' back from the server.")
+            let type = self.header?.headers.first(name: "Content-Type")
+            if type?.contains("text/plain") ?? false {
+                let string = String(buffer: byteBuffer)
+                connection.handleRead(string)
+            } else {
+                let data = Data(buffer: byteBuffer)
+                connection.handleRead(data)
+            }
         case .end:
             print("Closing channel.")
             context.close(promise: nil)

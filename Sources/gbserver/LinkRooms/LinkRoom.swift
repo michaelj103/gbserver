@@ -71,6 +71,7 @@ class LinkRoom {
         guard ownerChannel == nil else {
             throw RoomError.ownerAlreadyConnected
         }
+        print("Owner joined")
         ownerChannel = channel
         channel.closeFuture.whenComplete { [weak self] _ in
             print("Owner disconnected")
@@ -83,6 +84,7 @@ class LinkRoom {
             throw RoomError.participantAlreadyConnected
         }
         participantChannel = channel
+        print("Participant joined")
         channel.closeFuture.whenComplete { [weak self] _ in
             print("Participant disconnected")
             self?.participantChannel = nil
