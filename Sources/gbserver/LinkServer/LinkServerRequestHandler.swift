@@ -8,6 +8,7 @@
 import Foundation
 import NIOCore
 import NIOPosix
+import GBLinkServerProtocol
 
 class LinkServerRequestHandler: ChannelInboundHandler {
     public typealias InboundIn = LinkServerMessage

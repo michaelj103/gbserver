@@ -31,6 +31,7 @@ let package = Package(
                            .product(name: "Crypto", package: "swift-crypto"),
                            .product(name: "SQLite", package: "sqlite.swift"),
                            "GBServerPayloads",
+                           "GBLinkServerProtocol",
             ]
         ),
         .testTarget(
@@ -55,5 +56,9 @@ let package = Package(
             ]
         ),
         .target(name: "GBServerPayloads"),
+        .target(name: "GBLinkServerProtocol",
+                dependencies: [ .product(name: "NIO", package: "swift-nio"),
+                                .product(name: "NIOFoundationCompat", package: "swift-nio"),
+               ]),
     ]
 )

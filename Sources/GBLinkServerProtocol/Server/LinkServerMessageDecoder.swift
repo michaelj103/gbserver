@@ -2,27 +2,26 @@
 //  LinkServerMessageDecoder.swift
 //  
 //
-//  Created by Michael Brandt on 8/14/22.
+//  Created by Michael Brandt on 8/15/22.
 //
 
 import NIOCore
 
-// Supported command codes from the client
-enum LinkServerCommand: UInt8 {
-    case connect = 1
-}
-
 // Decoded messages passed along the pipeline for processing
-enum LinkServerMessage {
+public enum LinkServerMessage {
     case connect(String)
 }
 
-final class LinkServerMessageDecoder: ByteToMessageDecoder {
-    typealias InboundOut = LinkServerMessage
+public final class LinkServerMessageDecoder: ByteToMessageDecoder {
+    public typealias InboundOut = LinkServerMessage
+    
+    public init() {
+        
+    }
     
     private var decoderState = MessageDecoderState.waitingForCommand
     
-    func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         switch decoderState {
         case .waitingForCommand:
             if let decoder = try _getCommand(buffer: &buffer) {
@@ -52,7 +51,7 @@ final class LinkServerMessageDecoder: ByteToMessageDecoder {
         }
     }
     
-    private func _getCommand(buffer: inout ByteBuffer) throws -> LinkServerCommandDecoder? {
+    private func _getCommand(buffer: inout ByteBuffer) throws -> LinkCommandDecoder? {
         guard let byte = buffer.readBytes(length: 1)?.first else {
             return nil
         }
@@ -61,10 +60,10 @@ final class LinkServerMessageDecoder: ByteToMessageDecoder {
             throw DecodeError.unrecognizedCommand
         }
         
-        let decoder: LinkServerCommandDecoder
+        let decoder: LinkCommandDecoder
         switch command {
         case .connect:
-            decoder = ConnectCommandDecoder()
+            decoder = LinkServerConnectCommandDecoder()
         }
         
         return decoder
@@ -72,41 +71,12 @@ final class LinkServerMessageDecoder: ByteToMessageDecoder {
     
     private enum MessageDecoderState {
         case waitingForCommand
-        case waitingForLength(LinkServerCommandDecoder)
-        case decodingCommand(Int,LinkServerCommandDecoder)
+        case waitingForLength(LinkCommandDecoder)
+        case decodingCommand(Int, LinkCommandDecoder)
     }
     
-    enum DecodeError: Error {
+    public enum DecodeError: Error {
         case unrecognizedCommand
         case missingBytes
-    }
-}
-
-fileprivate protocol LinkServerCommandDecoder {
-    // Number of bytes specifying length of command. 0 if fixed length
-    var lengthFieldSize: Int { get }
-    
-    // Called once lengthFieldSize bytes are available to read additional length
-    func messageLength(buffer: inout ByteBuffer) throws -> Int
-    
-    // Called once messageLength bytes are available to decode the message, which is sent up the pipeline
-    func decodeMessage(buffer: inout ByteBuffer) throws -> LinkServerMessage
-}
-
-fileprivate struct ConnectCommandDecoder: LinkServerCommandDecoder {
-    // Always 22. 128 bit keys, base64 encoded -> 22 characters
-    private static let MessageLength = 22
-    
-    let lengthFieldSize: Int = 0
-    func messageLength(buffer: inout ByteBuffer) -> Int {
-        return ConnectCommandDecoder.MessageLength
-    }
-    
-    func decodeMessage(buffer: inout ByteBuffer) throws -> LinkServerMessage {
-        guard let key = buffer.readString(length: ConnectCommandDecoder.MessageLength) else {
-            throw LinkServerMessageDecoder.DecodeError.missingBytes
-        }
-        
-        return .connect(key)
     }
 }
