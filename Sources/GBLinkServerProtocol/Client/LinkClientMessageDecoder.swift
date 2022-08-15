@@ -20,6 +20,9 @@ public final class LinkClientMessageDecoder: ByteToMessageDecoder {
     private var decoderState = MessageDecoderState.waitingForCommand
     
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        // Internal loop is needed to decode command-code-only messages
+        // returning .continue won't loop externally if there's no data left in the read buffer
+        // except on the last decode (e.g. channel close)
         while true {
             let canContinue = try _internalDecodeStep(context: context, buffer: &buffer)
             if !canContinue {
