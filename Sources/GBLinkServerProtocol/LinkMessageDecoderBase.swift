@@ -67,18 +67,21 @@ public class LinkMessageDecoderBase<MessageType>: ByteToMessageDecoder {
         return try commandDecoder(for: byte)
     }
     
+    private enum MessageDecoderState {
+        case waitingForCommand
+        case waitingForLength(LinkCommandDecoder)
+        case decodingCommand(Int, LinkCommandDecoder)
+    }
+    
+    // MARK: - Subclass Hooks
+    // It's not the best that we're fighting the type system here...
+    
     func commandDecoder(for byte: UInt8) throws -> LinkCommandDecoder {
         preconditionFailure("Subclass requirement")
     }
     
     func decodeMessage(decoder: LinkCommandDecoder, buffer: inout ByteBuffer) throws -> MessageType {
         preconditionFailure("Subclass requirement")
-    }
-    
-    private enum MessageDecoderState {
-        case waitingForCommand
-        case waitingForLength(LinkCommandDecoder)
-        case decodingCommand(Int, LinkCommandDecoder)
     }
 }
 
