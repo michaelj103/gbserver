@@ -1,5 +1,5 @@
 //
-//  RegisterUserCommand.swift
+//  RegisterUserLegacyCommand.swift
 //  
 //
 //  Created by Michael Brandt on 8/5/22.
@@ -10,13 +10,13 @@ import NIOCore
 import GBServerPayloads
 import SQLite
 
-struct RegisterUserCommand: ServerJSONCommand {
+struct RegisterUserLegacyCommand: ServerJSONCommand {
     let name = "registerUser"
     
     private static let TotalAllowedUsers = 20 // For now. Stop registering users if we exceed this because something is up
     
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
-        let payload = try self.decodePayload(type: RegisterUserHTTPRequestPayload.self, data: data, decoder: decoder)
+        let payload = try self.decodePayload(type: RegisterUserLegacyHTTPRequestPayload.self, data: data, decoder: decoder)
         
         let responseFuture = context.db.asyncWrite(eventLoop: context.eventLoop) { dbConnection -> RegistrationResult in
             let deviceQuery = QueryBuilder<UserModel> { $0.filter(UserModel.deviceID == payload.deviceID )}
@@ -30,7 +30,7 @@ struct RegisterUserCommand: ServerJSONCommand {
             
             let allUsersQuery = QueryBuilder<UserModel>()
             let count = try UserModel.fetchCount(dbConnection, queryBuilder: allUsersQuery)
-            if count > RegisterUserCommand.TotalAllowedUsers {
+            if count > RegisterUserLegacyCommand.TotalAllowedUsers {
                 throw RegistrationError.maxCountReached
             }
             return .success

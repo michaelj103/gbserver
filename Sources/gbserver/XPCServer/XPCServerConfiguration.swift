@@ -25,7 +25,7 @@ struct XPCServerConfiguration {
         commandCenter.registerCommand(CurrentVersionCommand())
         commandCenter.registerCommand(AddVersionCommand())
         commandCenter.registerCommand(ListUsersCommand())
-        commandCenter.registerCommand(RegisterUserCommand())
+        commandCenter.registerCommand(RegisterUserLegacyCommand())
         commandCenter.registerCommand(UpdateUserCommand())
         commandCenter.registerCommand(CheckInCommand())
         commandCenter.registerCommand(ListCheckInsCommand())

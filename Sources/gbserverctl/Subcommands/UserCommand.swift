@@ -127,10 +127,10 @@ fileprivate extension GBServerCTL.UserCommand {
         
         private struct RegisterRequest: XPCRequest {
             let name = "registerUser"
-            let payload: RegisterUserXPCRequestPayload
+            let payload: RegisterUserLegacyXPCRequestPayload
             
             init(deviceID: String, displayName: String?) {
-                payload = RegisterUserXPCRequestPayload(deviceID: deviceID, displayName: displayName)
+                payload = RegisterUserLegacyXPCRequestPayload(deviceID: deviceID, displayName: displayName)
             }
         }
     }

@@ -51,7 +51,7 @@ public struct ListUsersXPCResponsePayload: Codable {
     }
 }
 
-public struct RegisterUserHTTPRequestPayload: Codable {
+public struct RegisterUserLegacyHTTPRequestPayload: Codable {
     public let deviceID: String
     public let displayName: String?
     
@@ -65,7 +65,7 @@ public struct RegisterUserHTTPRequestPayload: Codable {
     }
 }
 
-public typealias RegisterUserXPCRequestPayload = RegisterUserHTTPRequestPayload
+public typealias RegisterUserLegacyXPCRequestPayload = RegisterUserLegacyHTTPRequestPayload
 
 public struct UpdateUserXPCRequestPayload: Codable {
     // immutable properties
@@ -143,5 +143,22 @@ public struct UserGetDebugAuthHTTPResponsePayload: Codable {
     public init(_ authorized: Bool) {
         self.authorized = authorized
     }
+}
+
+public struct VerifyUserHTTPRequestPayload: QueryDecodable {
+    public let deviceID: String
+    
+    public init(query: [String : String]) throws {
+        if let deviceID = query["deviceID"] {
+            self.deviceID = deviceID
+        } else {
+            throw RequestDecodeError("Missing value for \"deviceID\"")
+        }
+    }
+}
+
+public enum VerifyUserHTTPResponsePayload: Codable {
+    case userExists
+    case userDoesNotExist
 }
 
