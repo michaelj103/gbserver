@@ -25,6 +25,9 @@ struct GBServer: ParsableCommand {
     @Option(name: .shortAndLong, help: "Path to a sqlite3 database. Defaults to nil (in memory)")
     var databasePath: String?
     
+    @Option(name: .shortAndLong, help: "API Key that clients must pass to perform restricted operations")
+    var key: String?
+    
     @Option(help: "Port to listen on for Link Server requests. If not specified, no link server will start")
     var linkPort: Int?
         
@@ -37,6 +40,12 @@ struct GBServer: ParsableCommand {
         let xpcCloseFuture = try xpcServerConfig.startXPCServer(threadGroup: group, database: database)
         let linkServerConfig = LinkServerConfiguration(host: host, port: linkPort)
         let linkServerCloseFuture = try linkServerConfig.startLinkServer(threadGroup: group)
+        
+        if let key = key {
+            RegisterUserCommand.setAPIKey(key)
+        } else {
+            print("User registration is disabled (no key)")
+        }
         
         // When the server channels close, try to shut down gracefully. Doesn't matter if we crash since
         // we're exiting anyway. This won't ever actually happen since we currently have no exit conditions
