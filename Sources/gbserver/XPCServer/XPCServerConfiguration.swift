@@ -29,6 +29,7 @@ struct XPCServerConfiguration {
         commandCenter.registerCommand(UpdateUserCommand())
         commandCenter.registerCommand(CheckInCommand())
         commandCenter.registerCommand(ListCheckInsCommand())
+        commandCenter.registerCommand(DeleteUserCommand())
         
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)

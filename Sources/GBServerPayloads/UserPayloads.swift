@@ -183,3 +183,10 @@ public enum VerifyUserHTTPResponsePayload: Codable {
     case userDoesNotExist
 }
 
+public struct DeleteUserXPCRequestPayload: Codable {
+    public let deviceID: String
+    public init(deviceID: String) {
+        self.deviceID = deviceID
+    }
+}
+

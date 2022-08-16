@@ -8,7 +8,7 @@
 import SQLite
 import GBServerPayloads
 
-struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, DatabaseUpdatable {
+struct UserModel: DatabaseTable, DatabaseFetchable, DatabaseInsertable, DatabaseUpdatable, DatabaseDeletable {
     let id: Int64
     let deviceID: String
     let displayName: String?

@@ -13,7 +13,7 @@ extension GBServerCTL {
     struct UserCommand: ParsableCommand {
         static var configuration = CommandConfiguration(
             commandName: "user",
-            subcommands: [List.self, Register.self, Update.self]
+            subcommands: [List.self, Register.self, Update.self, Delete.self]
         )
     }
 }
@@ -225,6 +225,54 @@ fileprivate extension GBServerCTL.UserCommand {
                     return true
                 }
                 return false
+            }
+        }
+    }
+}
+
+// MARK: - Deleting users
+
+fileprivate extension GBServerCTL.UserCommand {
+    struct Delete: ParsableCommand {
+        
+        @Option(name: .shortAndLong, help: "The user deviceID to delete.")
+        var deviceID: String
+        
+        mutating func run() throws {
+            let connectionManager = XPCConnectionManager()
+            let connection = try connectionManager.makeConnection()
+            
+            let request = DeleteRequest(deviceID: deviceID)
+            try connection.sendRequest(request) { result in
+                switch result {
+                case .success(let data):
+                    Delete._printResult(data)
+                case .failure(let error):
+                    print("register failed with error: \(error)")
+                }
+            }
+        }
+        
+        static private func _printResult(_ data: Data) {
+            guard let result = try? JSONDecoder().decode(GenericMessageResponse.self, from: data) else {
+                print("Unable to decode response from server")
+                return
+            }
+            
+            switch result {
+            case .success(let message):
+                print("Received success with message: \(message)")
+            case .failure(let message):
+                print("Received failure with message: \(message)")
+            }
+        }
+        
+        private struct DeleteRequest: XPCRequest {
+            let name = "deleteUser"
+            let payload: DeleteUserXPCRequestPayload
+            
+            init(deviceID: String) {
+                payload = DeleteUserXPCRequestPayload(deviceID: deviceID)
             }
         }
     }

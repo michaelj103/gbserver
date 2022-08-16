@@ -185,3 +185,16 @@ extension DatabaseFetchable {
         return try db.scalar(query.count)
     }
 }
+
+// MARK: - Deleting
+
+protocol DatabaseDeletable: DatabaseFetchable {
+    static func delete(_ db: Connection, queryBuilder: QueryBuilder<Self>) throws -> Int
+}
+
+extension DatabaseDeletable {
+    static func delete(_ db: Connection, queryBuilder: QueryBuilder<UserModel>) throws -> Int {
+        let query = queryBuilder.query
+        return try db.run(query.delete())
+    }
+}
