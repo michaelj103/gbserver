@@ -40,6 +40,9 @@ struct UpdateUserCommand: ServerJSONCommand {
             if let debugAuthUpdate = payload.updatedDebugAuthorization {
                 message += "\n   debugAuthorized: \(user.debugAuthorized) -> \(debugAuthUpdate)"
             }
+            if let createRoomAuthUpdate = payload.updateCreateRoomAuthorization {
+                message += "\n   debugAuthorized: \(user.createRoomAuthorized) -> \(createRoomAuthUpdate)"
+            }
             return .success(message)
         }.flatMapThrowing { updateResult -> Data in
             let genericResponse: GenericMessageResponse
