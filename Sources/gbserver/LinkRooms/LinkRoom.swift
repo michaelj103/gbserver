@@ -99,8 +99,23 @@ class LinkRoom {
     private var ownerState = ClientState.idle(0xFF)
     private var participantState = ClientState.idle(0xFF)
     
+    func clientInitialByte(_ byte: UInt8, clientType: ClientType) {
+        queue.sync {
+            noteActivity()
+            
+            switch clientType {
+            case .owner:
+                ownerState = .idle(byte)
+            case .participant:
+                participantState = .idle(byte)
+            }
+        }
+    }
+    
     func clientPushByte(_ byte: UInt8, clientType: ClientType) {
         queue.sync {
+            noteActivity()
+            
             switch clientType {
             case .owner:
                 if let participantChannel = participantChannel {

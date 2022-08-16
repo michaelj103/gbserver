@@ -116,7 +116,7 @@ class LinkServerRequestHandler: ChannelInboundHandler {
             throw ConnectionError.dataReceivedWithoutConnection
         }
         
-        //TODO: Fill in
+        connectedRoom.clientInitialByte(byte, clientType: clientType)
     }
     
     private func _handlePushedByte(_ byte: UInt8) throws {
