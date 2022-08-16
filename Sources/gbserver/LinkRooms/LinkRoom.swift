@@ -124,6 +124,7 @@ class LinkRoom {
                 } else {
                     // participant is not connected, respond to owner with not-connected byte
                     ownerChannel?.sendLinkMessage(.pullByte(0xFF))
+                    ownerState = .idle(0xFF)
                 }
             case .participant:
                 if let ownerChannel = ownerChannel {
@@ -132,6 +133,7 @@ class LinkRoom {
                 } else {
                     // owner is not connected, respond to participant with not-connected byte
                     participantChannel?.sendLinkMessage(.pullByte(0xFF))
+                    participantState = .idle(0xFF)
                 }
             }
         }
@@ -177,7 +179,51 @@ class LinkRoom {
             toState = .unexpectedPush(newToSideByte)
             fromState = .pushed(byte, newFromSideByte)
         }
+    }
+    
+    func clientPresentByte(_ byte: UInt8, clientType: ClientType) {
+        queue.sync {
+            noteActivity()
+            
+            switch clientType {
+            case .owner:
+                if let participantChannel = participantChannel {
+                    // participant is connected, run the present logic
+                    _onQueue_clientPresent(byte, fromState: &ownerState, fromChannel: ownerChannel!, toState: &participantState, toChannel: participantChannel)
+                } else {
+                    // participant is not connected. Fall into the "presented" state
+                    ownerState = .presented(byte)
+                }
+            case .participant:
+                if let ownerChannel = ownerChannel {
+                    // owner is connected, run the present logic
+                    _onQueue_clientPresent(byte, fromState: &participantState, fromChannel: participantChannel!, toState: &ownerState, toChannel: ownerChannel)
+                } else {
+                    // owner is not connected. Fall into the "presented" state
+                    participantState = .presented(byte)
+                }
+            }
+        }
+    }
+    
+    private func _onQueue_clientPresent(_ byte: UInt8, fromState: inout ClientState, fromChannel: Channel, toState: inout ClientState, toChannel: Channel) {
         
+        switch toState {
+        case .idle(_), .unexpectedPush(_), .presented(_):
+            // Owner isn't trying to do anything, so just sit here
+            fromState = .presented(byte)
+        case .pushed(let pushedByte, _):
+            // Owner pushed ahead of this presentation. Send them the new byte and push back to us
+            // Assume that this is the happy path with a slight timing offset and do a normal exchange
+            let newToSideByte = byte
+            let newFromSideByte = pushedByte
+            
+            toChannel.sendLinkMessage(.pullByte(byte))
+            fromChannel.sendLinkMessage(.bytePushed(newFromSideByte))
+            
+            toState = .idle(newToSideByte)
+            fromState = .idle(newFromSideByte)
+        }
     }
     
     // MARK: - Tracking room inactivity

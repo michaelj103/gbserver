@@ -132,7 +132,7 @@ class LinkServerRequestHandler: ChannelInboundHandler {
             throw ConnectionError.dataReceivedWithoutConnection
         }
         
-        //TODO: Fill in
+        connectedRoom.clientPresentByte(byte, clientType: clientType)
     }
     
     private enum ConnectionError: Error {
