@@ -28,6 +28,14 @@ class LinkClientHandler: ChannelInboundHandler {
         switch message {
         case .didConnect:
             print("Received didConnect message")
+        case .bytePushed(let byte):
+            print("Received pushed byte \(byte)")
+        case .pullByte(let byte):
+            print("Received pulled byte \(byte)")
+        case .pullByteStale(let byte):
+            print("Received stale pulled byte \(byte)")
+        case .commitStaleByte:
+            print("Commit stale byte")
         }
     }
     
