@@ -53,7 +53,9 @@ class LinkRoom {
             return
         }
         self.closed = true
-        print("Closing room \(self.roomID) for reason: \(reason))")
+        ownerChannel?.close(mode: .all, promise: nil)
+        participantChannel?.close(mode: .all, promise: nil)
+        print("Closing room \(self.roomID) for reason: \(reason)")
         self.closeHandler(self)
     }
     

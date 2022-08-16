@@ -14,6 +14,10 @@ struct LinkClientBytePushedCommandDecoder: LinkClientCommandDecoder {
     }
     
     func decodeMessage(buffer: inout ByteBuffer) throws -> LinkClientMessage {
-        return .didConnect
+        guard let byte = buffer.readBytes(length: 1)?.first else {
+            throw LinkMessageDecodeError.missingBytes
+        }
+        
+        return .bytePushed(byte)
     }
 }
