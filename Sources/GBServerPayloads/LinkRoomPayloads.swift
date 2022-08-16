@@ -5,6 +5,9 @@
 //  Created by Michael Brandt on 8/10/22.
 //
 
+// MARK: - Requests
+
+/// Request payload for creating a room. Successful response is LinkRoomClientInfo
 public struct CreateRoomHTTPRequestPayload: Codable {
     public let deviceID: String
     
@@ -17,6 +20,7 @@ public struct CreateRoomHTTPRequestPayload: Codable {
     }
 }
 
+/// Request payload for closing a room that you created. Successful response is GenericMessageResponse
 public struct CloseRoomHTTPRequestPayload: Codable {
     public let deviceID: String
     
@@ -29,6 +33,7 @@ public struct CloseRoomHTTPRequestPayload: Codable {
     }
 }
 
+/// Request payload for joining a room that a different user created using a join code. Successful response is LinkRoomClientInfo
 public struct JoinRoomHTTPRequestPayload: Codable {
     public let deviceID: String
     public let roomCode: String
@@ -42,6 +47,21 @@ public struct JoinRoomHTTPRequestPayload: Codable {
         clientInfo = ClientInfo()
     }
 }
+
+/// Request payload for getting a room that a user is currently a member of, if any. Successful response is PossibleLinkRoomClientInfo
+public struct GetRoomInfoHTTPRequestPayload: Codable {
+    public let deviceID: String
+    
+    public let clientInfo: ClientInfo?
+    
+    public init(deviceID: String) {
+        self.deviceID = deviceID
+        
+        clientInfo = ClientInfo()
+    }
+}
+
+// MARK: - Responses
 
 public enum LinkRoomKey: Codable {
     case owner(String)
@@ -60,5 +80,10 @@ public struct LinkRoomClientInfo: Codable {
         self.roomKey = roomKey
         self.linkPort = linkPort
     }
+}
+
+public enum PossibleLinkRoomClientInfo: Codable {
+    case isInRoom(LinkRoomClientInfo)
+    case isNotInRoom
 }
 

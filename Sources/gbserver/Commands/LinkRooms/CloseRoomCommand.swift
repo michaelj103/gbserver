@@ -26,11 +26,13 @@ struct CloseRoomCommand: ServerJSONCommand {
             
             return user.id
         }.flatMapWithEventLoop { userID, eventLoop -> EventLoopFuture<String> in
+            // part 2: ask the manager to attempt to close the room
             sharedManager.runBlock(eventLoop: eventLoop) { linkManager -> String in
                 let successMessage = try _closeRoom(linkManager, userID: userID)
                 return successMessage
             }
         }.flatMapThrowing { message -> Data in
+            // part 3: wrap successful responses in a generic payload for sending back to client
             let response = GenericMessageResponse.success(message: message)
             return try JSONEncoder().encode(response)
         }
