@@ -90,7 +90,6 @@ class LinkRoomManager {
     
     // MARK: - Closing rooms
     
-    // TODO: Server command for this
     // Close request from user with the given ID
     func closeRoom(_ userID: Int64) throws {
         dispatchPrecondition(condition: .onQueue(queue))

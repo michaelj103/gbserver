@@ -22,6 +22,7 @@ struct HTTPServerConfiguration {
         commandCenter.registerCommand(UserGetDebugAuthCommand())
         commandCenter.registerCommand(CreateRoomCommand())
         commandCenter.registerCommand(JoinRoomCommand())
+        commandCenter.registerCommand(CloseRoomCommand())
         
         // Set up server with configuration options
         let socketBootstrap = ServerBootstrap(group: threadGroup)
