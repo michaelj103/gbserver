@@ -25,18 +25,7 @@ class LinkClientHandler: ChannelInboundHandler {
     
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let message = unwrapInboundIn(data)
-        switch message {
-        case .didConnect:
-            print("Received didConnect message")
-        case .bytePushed(let byte):
-            print("Received pushed byte \(byte)")
-        case .pullByte(let byte):
-            print("Received pulled byte \(byte)")
-        case .pullByteStale(let byte):
-            print("Received stale pulled byte \(byte)")
-        case .commitStaleByte:
-            print("Commit stale byte")
-        }
+        connection.handleRead(message)
     }
     
     public func errorCaught(context: ChannelHandlerContext, error: Error) {

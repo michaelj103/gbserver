@@ -92,6 +92,10 @@ class LinkClientConnection {
     private(set) var channel: Channel!
     private let queue = DispatchQueue(label: "LinkClientConnectionQueue")
     
+    func close() {
+        channel.close(mode: .all, promise: nil)
+    }
+    
     // MARK: - Connection state
     
     typealias CloseCallback = (Result<Void, Error>) -> Void
@@ -107,42 +111,35 @@ class LinkClientConnection {
     
     // MARK: - Reading data
     
-    typealias BodyDataCallback = (Data) -> Void
-    private var bodyDataCallback: BodyDataCallback?
-    func setBodyDataCallback(_ callback: BodyDataCallback?) {
-        queue.sync { self.bodyDataCallback = callback }
+    typealias MessageReadCallback = (LinkClientMessage) -> Void
+    private var messageCallback: MessageReadCallback?
+    func setMessageCallback(_ callback: MessageReadCallback?) {
+        queue.sync { self.messageCallback = callback }
     }
-    func handleRead(_ data: Data) {
+    func handleRead(_ message: LinkClientMessage) {
         queue.async {
-            self.bodyDataCallback?(data)
-        }
-    }
-    
-    typealias BodyTextCallback = (String) -> Void
-    private var bodyTextCallback: BodyTextCallback?
-    func setBodyTextCallback(_ callback: BodyTextCallback?) {
-        queue.sync { self.bodyTextCallback = callback }
-    }
-    func handleRead(_ text: String) {
-        queue.async {
-            self.bodyTextCallback?(text)
+            self.messageCallback?(message)
         }
     }
     
     // MARK: - Writing data
     func write(_ bytes: [UInt8]) {
-        var buffer = channel.allocator.buffer(capacity: bytes.count)
-        buffer.writeBytes(bytes)
-        let _ = channel.writeAndFlush(buffer.slice())
+        queue.async {
+            var buffer = self.channel.allocator.buffer(capacity: bytes.count)
+            buffer.writeBytes(bytes)
+            let _ = self.channel.writeAndFlush(buffer.slice())
+        }
     }
 }
 
 fileprivate extension LinkClientConnection {
     func setChannel(_ channel: Channel) {
-        self.channel = channel
-        
-        channel.closeFuture.whenComplete { [weak self] result in
-            self?.invokeCloseCallback(result)
+        queue.sync {
+            self.channel = channel
+            
+            channel.closeFuture.whenComplete { [weak self] result in
+                self?.invokeCloseCallback(result)
+            }
         }
     }
 }

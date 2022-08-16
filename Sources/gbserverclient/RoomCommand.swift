@@ -133,10 +133,16 @@ fileprivate extension GBServerClient.RoomCommand {
             let bytes = code.map { $0.asciiValue! }
             connection.write([1] + bytes)
             
+            let roomSession = InteractiveRoomSession(connection: connection)
+            roomSession.keepAlive()
+            
             connection.setCloseCallback { _ in
                 session.stopKeepAlive()
+                roomSession.stopKeepAlive()
                 Create.exit(withError: nil)
             }
+            
+            roomSession.start()
             
             Dispatch.dispatchMain()
         }
