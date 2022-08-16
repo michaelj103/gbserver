@@ -67,6 +67,27 @@ public struct RegisterUserLegacyHTTPRequestPayload: Codable {
 
 public typealias RegisterUserLegacyXPCRequestPayload = RegisterUserLegacyHTTPRequestPayload
 
+public struct RegisterUserHTTPRequestPayload: Codable {
+    public let apiKey: String
+    public let displayName: String?
+    
+    public let clientInfo: ClientInfo?
+    
+    public init(key: String, displayName: String?) {
+        self.apiKey = key
+        self.displayName = displayName
+        
+        clientInfo = ClientInfo()
+    }
+}
+
+public struct RegisterUserHTTPResponsePayload: Codable {
+    public let deviceID: String
+    public init(deviceID: String) {
+        self.deviceID = deviceID
+    }
+}
+
 public struct UpdateUserXPCRequestPayload: Codable {
     // immutable properties
     public let deviceID: String
