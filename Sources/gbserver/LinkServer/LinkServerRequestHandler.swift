@@ -16,6 +16,7 @@ class LinkServerRequestHandler: ChannelInboundHandler {
     
     private var connectionTimeout: Scheduled<Void>?
     private var connectedRoom: LinkRoom?
+    private var connectedType: LinkRoom.ClientType?
     
     public func handlerAdded(context: ChannelHandlerContext) {
         let timeout: Scheduled<Void> = context.eventLoop.scheduleTask(in: .seconds(10)) { [weak self] in
@@ -38,10 +39,23 @@ class LinkServerRequestHandler: ChannelInboundHandler {
             error = _runWithError {
                 try _connectToRoom(context: context, key: key)
             }
+        case .initialByte(let byte):
+            error = _runWithError {
+                try _handleInitialByte(byte)
+            }
+        case .pushByte(let byte):
+            error = _runWithError {
+                try _handlePushedByte(byte)
+            }
+        case .presentByte(let byte):
+            error = _runWithError {
+                try _handlePresentedByte(byte)
+            }
         }
         
         if let error = error {
             print("Failure requiring room channel close: \(error)")
+            context.close(promise: nil)
         }
     }
     
@@ -72,10 +86,10 @@ class LinkServerRequestHandler: ChannelInboundHandler {
         connectionTimeout = nil
         
         let channel = context.channel
-        let connectFuture = LinkRoomManager.sharedManager.runBlock(eventLoop: context.eventLoop) { manager -> LinkRoom in
+        let connectFuture = LinkRoomManager.sharedManager.runBlock(eventLoop: context.eventLoop) { manager -> (LinkRoom, LinkRoom.ClientType) in
             let (room, clientType) = try manager.roomForConnectionWithKey(key)
             try room.connectClient(channel: channel, clientType: clientType)
-            return room
+            return (room, clientType)
         }
         
         connectFuture.whenComplete { [weak self] result in
@@ -83,11 +97,12 @@ class LinkServerRequestHandler: ChannelInboundHandler {
         }
     }
     
-    private func _connectionDidComplete(context: ChannelHandlerContext, result: Result<LinkRoom, Error>) {
+    private func _connectionDidComplete(context: ChannelHandlerContext, result: Result<(LinkRoom, LinkRoom.ClientType), Error>) {
         switch result {
-        case .success(let room):
+        case .success(let (room, clientType)):
             connectedRoom = room
-            let buffer = ByteBuffer(data: LinkClientCommand.didConnect.asData())
+            connectedType = clientType
+            let buffer = ByteBuffer(bytes: [LinkClientCommand.didConnect.rawValue])
             context.channel.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
             
         case .failure(let error):
@@ -96,8 +111,33 @@ class LinkServerRequestHandler: ChannelInboundHandler {
         }
     }
     
+    private func _handleInitialByte(_ byte: UInt8) throws {
+        guard let connectedRoom = connectedRoom, let clientType = connectedType else {
+            throw ConnectionError.dataReceivedWithoutConnection
+        }
+        
+        //TODO: Fill in
+    }
+    
+    private func _handlePushedByte(_ byte: UInt8) throws {
+        guard let connectedRoom = connectedRoom, let clientType = connectedType else {
+            throw ConnectionError.dataReceivedWithoutConnection
+        }
+        
+        connectedRoom.clientPushByte(byte, clientType: clientType)
+    }
+    
+    private func _handlePresentedByte(_ byte: UInt8) throws {
+        guard let connectedRoom = connectedRoom, let clientType = connectedType else {
+            throw ConnectionError.dataReceivedWithoutConnection
+        }
+        
+        //TODO: Fill in
+    }
+    
     private enum ConnectionError: Error {
         case alreadyConnected
+        case dataReceivedWithoutConnection
     }
 }
 

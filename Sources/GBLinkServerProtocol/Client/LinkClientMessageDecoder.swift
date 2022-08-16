@@ -10,6 +10,10 @@ import NIOCore
 // Decoded messages passed along the pipeline for processing
 public enum LinkClientMessage {
     case didConnect
+    case pullByte(UInt8)
+    case pullByteStale(UInt8)
+    case commitStaleByte
+    case bytePushed(UInt8)
 }
 
 public final class LinkClientMessageDecoder: LinkMessageDecoderBase<LinkClientMessage> {
@@ -29,6 +33,14 @@ public final class LinkClientMessageDecoder: LinkMessageDecoderBase<LinkClientMe
         switch command {
         case .didConnect:
             decoder = LinkClientDidConnectCommandDecoder()
+        case .pullByte:
+            decoder = LinkClientPullByteCommandDecoder(type: .complete)
+        case .pullByteStale:
+            decoder = LinkClientPullByteCommandDecoder(type: .stale)
+        case .commitStaleByte:
+            decoder = LinkClientCommitStaleByteCommandDecoder()
+        case .bytePushed:
+            decoder = LinkClientBytePushedCommandDecoder()
         }
         
         return decoder

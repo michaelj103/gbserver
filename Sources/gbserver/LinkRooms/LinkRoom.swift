@@ -7,6 +7,7 @@
 
 import Foundation
 import NIOCore
+import GBLinkServerProtocol
 
 class LinkRoom {
     let roomID: Int
@@ -59,15 +60,17 @@ class LinkRoom {
     // MARK: - Connection Interface
     
     func connectClient(channel: Channel, clientType: ClientType) throws {
-        switch clientType {
-        case .owner:
-            try _connectOwner(channel)
-        case .participant:
-            try _connectParticipant(channel)
+        try queue.sync {
+            switch clientType {
+            case .owner:
+                try _onQueue_connectOwner(channel)
+            case .participant:
+                try _onQueue_connectParticipant(channel)
+            }
         }
     }
     
-    private func _connectOwner(_ channel: Channel) throws {
+    private func _onQueue_connectOwner(_ channel: Channel) throws {
         guard ownerChannel == nil else {
             throw RoomError.ownerAlreadyConnected
         }
@@ -79,7 +82,7 @@ class LinkRoom {
         }
     }
     
-    private func _connectParticipant(_ channel: Channel) throws {
+    private func _onQueue_connectParticipant(_ channel: Channel) throws {
         guard participantChannel == nil else {
             throw RoomError.participantAlreadyConnected
         }
@@ -89,6 +92,77 @@ class LinkRoom {
             print("Participant disconnected")
             self?.participantChannel = nil
         }
+    }
+    
+    // MARK: - Client Data I/O
+    
+    private var ownerState = ClientState.idle(0xFF)
+    private var participantState = ClientState.idle(0xFF)
+    
+    func clientPushByte(_ byte: UInt8, clientType: ClientType) {
+        queue.sync {
+            switch clientType {
+            case .owner:
+                if let participantChannel = participantChannel {
+                    // participant is connected, run the push logic
+                    _onQueue_clientPush(byte, fromState: &ownerState, fromChannel: ownerChannel!, toState: &participantState, toChannel: participantChannel)
+                } else {
+                    // participant is not connected, respond to owner with not-connected byte
+                    ownerChannel?.sendLinkMessage(.pullByte(0xFF))
+                }
+            case .participant:
+                if let ownerChannel = ownerChannel {
+                    // owner is connected, run the push logic
+                    _onQueue_clientPush(byte, fromState: &participantState, fromChannel: participantChannel!, toState: &ownerState, toChannel: ownerChannel)
+                } else {
+                    // owner is not connected, respond to participant with not-connected byte
+                    participantChannel?.sendLinkMessage(.pullByte(0xFF))
+                }
+            }
+        }
+    }
+    
+    private func _onQueue_clientPush(_ byte: UInt8, fromState: inout ClientState, fromChannel: Channel, toState: inout ClientState, toChannel: Channel) {
+        
+        switch toState {
+        case .idle(let idleByte), .unexpectedPush(let idleByte):
+            // The "to" side goes to unexpected push. Nothing sent because it isn't waiting
+            // send the idle byte to the "from" side as stale. It goes to pushed
+            let newToSideByte = byte
+            let newFromSideByte = idleByte
+            
+            fromChannel.sendLinkMessage(.pullByteStale(newFromSideByte))
+            
+            toState = .unexpectedPush(newToSideByte)
+            fromState = .pushed(byte, newFromSideByte)
+            
+        case .presented(let presentedByte):
+            // Happy path: the "to" side has already presented, so we can do the swap normally
+            let newToSideByte = byte
+            let newFromSideByte = presentedByte
+            
+            toChannel.sendLinkMessage(.bytePushed(newToSideByte))
+            fromChannel.sendLinkMessage(.pullByte(newFromSideByte))
+            
+            toState = .idle(newToSideByte)
+            fromState = .idle(newFromSideByte)
+            
+        case .pushed(_, let staleResponse):
+            // The "to" side was waiting for a push response and the "from" side pushed
+            // We have a few options for how this *could* be handled
+            // Going with:
+            // - commit the stale byte on the "to" side and move it into "unexpected push"
+            // - from side gets the stale (now committed) byte back and treats it as stale itself
+            let newToSideByte = byte
+            let newFromSideByte = staleResponse
+            
+            toChannel.sendLinkMessage(.commitStaleByte)
+            fromChannel.sendLinkMessage(.pullByteStale(newFromSideByte))
+            
+            toState = .unexpectedPush(newToSideByte)
+            fromState = .pushed(byte, newFromSideByte)
+        }
+        
     }
     
     // MARK: - Tracking room inactivity
@@ -123,5 +197,45 @@ class LinkRoom {
     enum RoomError: Error {
         case ownerAlreadyConnected
         case participantAlreadyConnected
+    }
+    
+    private enum ClientState {
+        /// Not waiting for anything to happen with argument byte in register
+        case idle(UInt8)
+        
+        /// The given byte was unexpectedly pushed to this client
+        /// If the client subsequently presents, treat it as that push succeeding
+        case unexpectedPush(UInt8)
+        
+        /// Client has presented the given byte for pull and is waiting for the other client to push
+        case presented(UInt8)
+        
+        /// Client has pushed the given byte (first arg) and the other client didn't have a byte presented
+        /// Indicates that this client is waiting with a stale received byte (second arg)
+        case pushed(UInt8, UInt8)
+    }
+}
+
+// Channel extension for sending messages to clients
+extension Channel {
+    @discardableResult
+    func sendLinkMessage(_ message: LinkClientMessage) -> EventLoopFuture<Void> {
+        var buffer = allocator.buffer(capacity: 2)
+        switch message {
+        case .didConnect:
+            // never sent from here
+            return eventLoop.makeSucceededVoidFuture()
+        case .pullByte(let byte):
+            buffer.writeBytes([LinkClientCommand.pullByte.rawValue, byte])
+        case .pullByteStale(let byte):
+            buffer.writeBytes([LinkClientCommand.pullByteStale.rawValue, byte])
+        case .commitStaleByte:
+            buffer.writeBytes([LinkClientCommand.commitStaleByte.rawValue])
+        case .bytePushed(let byte):
+            buffer.writeBytes([LinkClientCommand.bytePushed.rawValue, byte])
+        }
+        
+        let future = writeAndFlush(buffer)
+        return future
     }
 }

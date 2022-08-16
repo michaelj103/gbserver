@@ -10,6 +10,9 @@ import NIOCore
 // Decoded messages passed along the pipeline for processing
 public enum LinkServerMessage {
     case connect(String)
+    case initialByte(UInt8)
+    case pushByte(UInt8)
+    case presentByte(UInt8)
 }
 
 public final class LinkServerMessageDecoder: LinkMessageDecoderBase<LinkServerMessage> {
@@ -29,6 +32,12 @@ public final class LinkServerMessageDecoder: LinkMessageDecoderBase<LinkServerMe
         switch command {
         case .connect:
             decoder = LinkServerConnectCommandDecoder()
+        case .initialByte:
+            decoder = LinkServerInitialByteCommandDecoder()
+        case .pushByte:
+            decoder = LinkServerReceiveByteCommandDecoder(type: .push)
+        case .presentByte:
+            decoder = LinkServerReceiveByteCommandDecoder(type: .present)
         }
         
         return decoder
