@@ -30,6 +30,9 @@ class DatabaseManager {
     }
     
     func performInitialSetup() throws {
+        // Turn on foreign keys so delete/update rules work
+        try db.execute("PRAGMA foreign_keys = 1;")
+        
         for table in tables {
             try table.createTableIfNecessary(db)
         }
