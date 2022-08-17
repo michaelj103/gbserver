@@ -196,11 +196,13 @@ extension DatabaseFetchable {
 // MARK: - Deleting
 
 protocol DatabaseDeletable: DatabaseFetchable {
+    @discardableResult
     static func delete(_ db: Connection, queryBuilder: QueryBuilder<Self>) throws -> Int
 }
 
 extension DatabaseDeletable {
-    static func delete(_ db: Connection, queryBuilder: QueryBuilder<UserModel>) throws -> Int {
+    @discardableResult
+    static func delete(_ db: Connection, queryBuilder: QueryBuilder<Self>) throws -> Int {
         let query = queryBuilder.query
         return try db.run(query.delete())
     }

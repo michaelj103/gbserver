@@ -12,6 +12,8 @@ import SQLite
 
 struct CheckInCommand: ServerJSONCommand {
     let name = "checkIn"
+    
+    private static let maxCheckInCount = 100
         
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         let payload = try self.decodePayload(type: CheckInUserHTTPRequestPayload.self, data: data, decoder: decoder)
@@ -25,6 +27,22 @@ struct CheckInCommand: ServerJSONCommand {
             
             let insertion = CheckInModel.InsertRecord(userID: user.id, date: now, version: payload.version)
             let checkInRowID = try CheckInModel.insert(dbConnection, record: insertion)
+            
+            let allCheckInsQuery = QueryBuilder<CheckInModel> {
+                $0.filter(CheckInModel.userID == user.id).order(CheckInModel.date.asc)
+            }
+            let allCheckIns = try CheckInModel.fetch(dbConnection, queryBuilder: allCheckInsQuery)
+            
+            if allCheckIns.count > CheckInCommand.maxCheckInCount {
+                let excess = allCheckIns.count - CheckInCommand.maxCheckInCount
+                // Could batch, but there should really only ever be 1 excess
+                for i in 0..<excess {
+                    let checkInID = allCheckIns[i].id
+                    let deleteQuery = QueryBuilder<CheckInModel> { $0.filter(CheckInModel.id == checkInID) }
+                    try CheckInModel.delete(dbConnection, queryBuilder: deleteQuery)
+                }
+            }
+            
             return .success(checkInRowID)
         }.flatMapThrowing { checkInResult -> Data in
             let response: GenericMessageResponse

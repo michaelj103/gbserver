@@ -9,7 +9,7 @@ import Foundation
 import SQLite
 import GBServerPayloads
 
-struct CheckInModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable {
+struct CheckInModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable, DatabaseDeletable {
     let id: Int64
     let date: Date
     let version: String
