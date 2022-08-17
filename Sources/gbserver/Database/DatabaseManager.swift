@@ -13,7 +13,7 @@ class DatabaseManager {
     private let queue: DispatchQueue
     private let tables: [DatabaseTable.Type]
     
-    private static let CurrentSchemaVersion: Int32 = 3
+    private static let CurrentSchemaVersion: Int32 = 4
     
     init(_ location: Connection.Location, tables: [DatabaseTable.Type]) throws {
         db = try Connection(location)
@@ -42,6 +42,10 @@ class DatabaseManager {
             }
             if userVersion < 3 {
                 let addColumn = UserModel.table.addColumn(UserModel.createRoomAuthorized, defaultValue: false)
+                try db.run(addColumn)
+            }
+            if userVersion < 4 {
+                let addColumn = CheckInModel.table.addColumn(CheckInModel.version, defaultValue: "legacy")
                 try db.run(addColumn)
             }
         }

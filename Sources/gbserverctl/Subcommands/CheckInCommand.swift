@@ -55,8 +55,8 @@ fileprivate extension GBServerCTL.CheckInCommand {
             if let result = try? JSONDecoder().decode(ListCheckInsXPCResponsePayload.self, from: data) {
                 let count = result.checkIns.count
                 print("Found \(count) checkin", terminator: count == 1 ? "\n" : "s\n")
-                for date in result.checkIns {
-                    print("Date: \(date)")
+                for checkIn in result.checkIns {
+                    print("Date: \(checkIn.date) - \(checkIn.version)")
                 }
                 
             } else if let result = try? JSONDecoder().decode(GenericMessageResponse.self, from: data) {
@@ -84,11 +84,14 @@ fileprivate extension GBServerCTL.CheckInCommand {
         @Option(name: .shortAndLong, help: "The user deviceID check in.")
         var deviceID: String
         
+        @Option(name: .shortAndLong, help: "Version string to check in.")
+        var version: String?
+        
         mutating func run() throws {
             let connectionManager = XPCConnectionManager()
             let connection = try connectionManager.makeConnection()
             
-            let request = MakeXPCRequest(deviceID: deviceID)
+            let request = MakeXPCRequest(deviceID: deviceID, version: version)
             try connection.sendRequest(request) { result in
                 switch result {
                 case .success(let data):
@@ -112,8 +115,8 @@ fileprivate extension GBServerCTL.CheckInCommand {
             let name = "checkIn"
             let payload: CheckInUserXPCRequestPayload
             
-            init(deviceID: String) {
-                payload = CheckInUserXPCRequestPayload(deviceID: deviceID)
+            init(deviceID: String, version: String?) {
+                payload = CheckInUserXPCRequestPayload(deviceID: deviceID, version: version)
             }
         }
     }

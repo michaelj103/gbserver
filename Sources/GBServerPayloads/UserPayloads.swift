@@ -111,11 +111,13 @@ public struct UpdateUserXPCRequestPayload: Codable {
 
 public struct CheckInUserHTTPRequestPayload: Codable {
     public let deviceID: String
+    public let version: String?
     
     public let clientInfo: ClientInfo?
     
-    public init(deviceID: String) {
+    public init(deviceID: String, version: String?) {
         self.deviceID = deviceID
+        self.version = version
         
         self.clientInfo = ClientInfo()
     }
@@ -137,11 +139,20 @@ public struct ListCheckInsXPCRequestPayload: Codable {
     }
 }
 
+public struct CheckInXPCPayload: Codable {
+    public let date: Date
+    public let version: String
+    public init(date: Date, version: String) {
+        self.date = date
+        self.version = version
+    }
+}
+
 public struct ListCheckInsXPCResponsePayload: Codable {
     public let deviceID: String
-    public let checkIns: [Date]
+    public let checkIns: [CheckInXPCPayload]
     
-    public init(deviceID: String, checkIns: [Date]) {
+    public init(deviceID: String, checkIns: [CheckInXPCPayload]) {
         self.deviceID = deviceID
         self.checkIns = checkIns
     }

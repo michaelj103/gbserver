@@ -34,8 +34,8 @@ struct ListCheckInsCommand: ServerJSONCommand {
                 let response = GenericMessageResponse.failure(message: "User Not Found")
                 data = try JSONEncoder().encode(response)
             case .success(let checkIns):
-                let dates = checkIns.map { $0.date }
-                let response = ListCheckInsXPCResponsePayload(deviceID: payload.deviceID, checkIns: dates)
+                let checkInPayloads = checkIns.map { CheckInXPCPayload(date: $0.date, version: $0.version) }
+                let response = ListCheckInsXPCResponsePayload(deviceID: payload.deviceID, checkIns: checkInPayloads)
                 data = try JSONEncoder().encode(response)
             }
             return data

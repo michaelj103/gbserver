@@ -23,7 +23,7 @@ struct CheckInCommand: ServerJSONCommand {
                 return CheckInResult.userNotFound
             }
             
-            let insertion = CheckInModel.InsertRecord(userID: user.id, date: now)
+            let insertion = CheckInModel.InsertRecord(userID: user.id, date: now, version: payload.version)
             let checkInRowID = try CheckInModel.insert(dbConnection, record: insertion)
             return .success(checkInRowID)
         }.flatMapThrowing { checkInResult -> Data in
