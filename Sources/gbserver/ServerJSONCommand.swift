@@ -16,6 +16,7 @@ struct ServerCommandContext {
 
 enum ServerJSONCommandError: Swift.Error {
     case unrecognizedCommand
+    case invalidRequestMethod
     case decodeError(underlyingError: Error)
 }
 
@@ -88,10 +89,10 @@ extension ServerJSONCommand {
     }
     
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
-        throw RuntimeError("XPC payloads aren't supported by the \(name) command")
+        context.eventLoop.makeFailedFuture(ServerJSONCommandError.invalidRequestMethod)
     }
     
     func run(with arguments: [URLQueryItem], context: ServerCommandContext) throws -> EventLoopFuture<Data> {
-        throw RuntimeError("Query arguments aren't supported by the \(name) command")
+        context.eventLoop.makeFailedFuture(ServerJSONCommandError.invalidRequestMethod)
     }
 }

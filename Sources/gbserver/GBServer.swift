@@ -17,7 +17,7 @@ struct GBServer: ParsableCommand {
     static var configuration = CommandConfiguration(commandName: "gbserver")
     
     @Option(name: .shortAndLong, help: "Host to bind to for listening. Defaults to \"localhost\"")
-    var host: String = "localhost"
+    var host: String = "0.0.0.0"
     
     @Option(name: .shortAndLong, help: "Port to listen on for HTTP requests. Defaults to 8080")
     var port: Int = 8080

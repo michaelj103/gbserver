@@ -212,10 +212,10 @@ class LinkRoom {
         
         switch toState {
         case .idle(_), .unexpectedPush(_), .presented(_):
-            // Owner isn't trying to do anything, so just sit here
+            // Other side isn't trying to do anything, so just sit here
             fromState = .presented(byte)
         case .pushed(let pushedByte, _):
-            // Owner pushed ahead of this presentation. Send them the new byte and push back to us
+            // Other side pushed ahead of this presentation. Send them the new byte and push back to us
             // Assume that this is the happy path with a slight timing offset and do a normal exchange
             let newToSideByte = byte
             let newFromSideByte = pushedByte

@@ -133,7 +133,10 @@ final class HTTPRequestHandler: ChannelInboundHandler {
                 } else {
                     self._sendEmptyStatus(context: context, status: .badRequest)
                 }
-            } else {
+            } else if ((error as? ServerJSONCommandError) != nil) {
+                self._sendEmptyStatus(context: context, status: .badRequest)
+            }
+            else {
                 self._sendEmptyStatus(context: context, status: .internalServerError)
             }
         }

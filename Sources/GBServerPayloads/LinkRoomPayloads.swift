@@ -49,7 +49,7 @@ public struct JoinRoomHTTPRequestPayload: Codable {
 }
 
 /// Request payload for getting a room that a user is currently a member of, if any. Successful response is PossibleLinkRoomClientInfo
-public struct GetRoomInfoHTTPRequestPayload: Codable {
+public struct GetRoomInfoHTTPRequestPayload: Codable, QueryDecodable {
     public let deviceID: String
     
     public let clientInfo: ClientInfo?
@@ -58,6 +58,15 @@ public struct GetRoomInfoHTTPRequestPayload: Codable {
         self.deviceID = deviceID
         
         clientInfo = ClientInfo()
+    }
+    
+    public init(query: [String : String]) throws {
+        clientInfo = nil
+        if let deviceID = query["deviceID"] {
+            self.deviceID = deviceID
+        } else {
+            throw RequestDecodeError("Missing value for \"deviceID\"")
+        }
     }
 }
 

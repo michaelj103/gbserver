@@ -15,6 +15,15 @@ struct GetRoomInfoCommand: ServerJSONCommand {
         
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         let payload = try self.decodePayload(type: GetRoomInfoHTTPRequestPayload.self, data: data, decoder: decoder)
+        return _run(payload, context: context)
+    }
+    
+    func run(with arguments: [URLQueryItem], context: ServerCommandContext) throws -> EventLoopFuture<Data> {
+        let payload: GetRoomInfoHTTPRequestPayload = try self.decodeQueryPayload(query: arguments)
+        return _run(payload, context: context)
+    }
+    
+    func _run(_ payload: GetRoomInfoHTTPRequestPayload, context: ServerCommandContext) -> EventLoopFuture<Data> {
         let sharedManager = LinkRoomManager.sharedManager
         
         let responseFuture = context.db.asyncRead(eventLoop: context.eventLoop) { dbConnection -> Int64 in
