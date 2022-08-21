@@ -30,6 +30,9 @@ struct GBServer: ParsableCommand {
     
     @Option(help: "Port to listen on for Link Server requests. If not specified, no link server will start")
     var linkPort: Int?
+    
+    @Flag(help: "Allow every user to create rooms. For test instances")
+    var noCheckRooms: Bool = false
         
     mutating func run() throws {
         let database = try _setupDatabase()
@@ -46,6 +49,8 @@ struct GBServer: ParsableCommand {
         } else {
             print("User registration is disabled (no key)")
         }
+        
+        CreateRoomCommand.setRequireAuth(!noCheckRooms)
         
         // When the server channels close, try to shut down gracefully. Doesn't matter if we crash since
         // we're exiting anyway. This won't ever actually happen since we currently have no exit conditions

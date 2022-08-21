@@ -10,6 +10,7 @@ let package = Package(
     ],
     products: [
         .library(name: "GBServerPayloads", targets: ["GBServerPayloads"]),
+        .library(name: "GBLinkServerProtocol", targets: ["GBLinkServerProtocol"]),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
