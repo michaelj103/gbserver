@@ -8,7 +8,6 @@
 import Foundation
 import NIOCore
 import NIOPosix
-import NIOHTTP1
 import NIOFoundationCompat
 
 public class LinkClientHandler: ChannelInboundHandler {

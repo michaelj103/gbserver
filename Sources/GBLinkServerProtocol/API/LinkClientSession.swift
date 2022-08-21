@@ -8,7 +8,6 @@
 import Foundation
 import NIOCore
 import NIOPosix
-import NIOHTTP1
 import NIOConcurrencyHelpers
 
 public class LinkClientSession {
