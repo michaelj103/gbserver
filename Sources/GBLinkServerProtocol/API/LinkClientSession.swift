@@ -10,9 +10,8 @@ import NIOCore
 import NIOPosix
 import NIOHTTP1
 import NIOConcurrencyHelpers
-import GBLinkServerProtocol
 
-class LinkClientSession {
+public class LinkClientSession {
     private let threadGroup: MultiThreadedEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     lazy private var bootstrap: ClientBootstrap = {
         ClientBootstrap(group: threadGroup)
@@ -33,7 +32,7 @@ class LinkClientSession {
     private let host: String
     private let port: Int
     private let sessionID: UUID
-    init(host: String, port: Int) {
+    public init(host: String, port: Int) {
         self.host = host
         self.port = port
         sessionID = UUID()
@@ -47,7 +46,7 @@ class LinkClientSession {
         }
     }
     
-    func makeConnection() throws -> LinkClientConnection {
+    public func makeConnection() throws -> LinkClientConnection {
         let connection = LinkClientConnection()
         try connectionLock.withLockVoid {
             guard pendingConnection == nil else {
@@ -71,12 +70,12 @@ class LinkClientSession {
     
     // MARK: - Keep alive
     
-    static var keepAliveSessions = [UUID: LinkClientSession]()
-    func keepAlive() {
+    private static var keepAliveSessions = [UUID: LinkClientSession]()
+    public func keepAlive() {
         LinkClientSession.keepAliveSessions[sessionID] = self
     }
     
-    func stopKeepAlive() {
+    public func stopKeepAlive() {
         LinkClientSession.keepAliveSessions[sessionID] = nil
     }
     
@@ -88,19 +87,19 @@ class LinkClientSession {
 
 // MARK: - Connection -
 
-class LinkClientConnection {
+public class LinkClientConnection {
     private(set) var channel: Channel!
     private let queue = DispatchQueue(label: "LinkClientConnectionQueue")
     
-    func close() {
+    public func close() {
         channel.close(mode: .all, promise: nil)
     }
     
     // MARK: - Connection state
     
-    typealias CloseCallback = (Result<Void, Error>) -> Void
+    public typealias CloseCallback = (Result<Void, Error>) -> Void
     private var closeCallback: CloseCallback?
-    func setCloseCallback(_ callback: CloseCallback?) {
+    public func setCloseCallback(_ callback: CloseCallback?) {
         queue.sync { self.closeCallback = callback }
     }
     private func invokeCloseCallback(_ result: Result<Void,Error>) {
@@ -111,19 +110,19 @@ class LinkClientConnection {
     
     // MARK: - Reading data
     
-    typealias MessageReadCallback = (LinkClientMessage) -> Void
+    public typealias MessageReadCallback = (LinkClientMessage) -> Void
     private var messageCallback: MessageReadCallback?
-    func setMessageCallback(_ callback: MessageReadCallback?) {
+    public func setMessageCallback(_ callback: MessageReadCallback?) {
         queue.sync { self.messageCallback = callback }
     }
-    func handleRead(_ message: LinkClientMessage) {
+    public func handleRead(_ message: LinkClientMessage) {
         queue.async {
             self.messageCallback?(message)
         }
     }
     
     // MARK: - Writing data
-    func write(_ bytes: [UInt8]) {
+    public func write(_ bytes: [UInt8]) {
         queue.async {
             var buffer = self.channel.allocator.buffer(capacity: bytes.count)
             buffer.writeBytes(bytes)

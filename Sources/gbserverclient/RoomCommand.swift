@@ -10,6 +10,7 @@ import ArgumentParser
 import NIOHTTP1
 import NIOFoundationCompat
 import GBServerPayloads
+import GBLinkServerProtocol
 
 extension GBServerClient {
     struct RoomCommand: ParsableCommand {

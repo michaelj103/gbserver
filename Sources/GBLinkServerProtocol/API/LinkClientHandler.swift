@@ -10,9 +10,8 @@ import NIOCore
 import NIOPosix
 import NIOHTTP1
 import NIOFoundationCompat
-import GBLinkServerProtocol
 
-class LinkClientHandler: ChannelInboundHandler {
+public class LinkClientHandler: ChannelInboundHandler {
     public typealias InboundIn = LinkClientMessage
     public typealias OutboundOut = ByteBuffer
     private var sendBytes = 0
