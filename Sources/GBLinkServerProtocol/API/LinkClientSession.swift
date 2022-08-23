@@ -114,7 +114,7 @@ public class LinkClientConnection {
     public func setMessageCallback(_ callback: MessageReadCallback?) {
         queue.sync { self.messageCallback = callback }
     }
-    public func handleRead(_ message: LinkClientMessage) {
+    internal func handleRead(_ message: LinkClientMessage) {
         queue.async {
             self.messageCallback?(message)
         }

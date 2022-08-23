@@ -75,6 +75,15 @@ public struct GetRoomInfoHTTPRequestPayload: Codable, QueryDecodable {
 public enum LinkRoomKey: Codable {
     case owner(String)
     case participant(String)
+    
+    public var stringValue: String {
+        switch self {
+        case .owner(let string):
+            return string
+        case .participant(let string):
+            return string
+        }
+    }
 }
 
 public struct LinkRoomClientInfo: Codable {
