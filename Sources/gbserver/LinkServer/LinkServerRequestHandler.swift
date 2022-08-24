@@ -32,7 +32,6 @@ class LinkServerRequestHandler: ChannelInboundHandler {
     
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let message = unwrapInboundIn(data)
-        print("Got message \(message)")
         var error: Error? = nil
         switch message {
         case .connect(let key):

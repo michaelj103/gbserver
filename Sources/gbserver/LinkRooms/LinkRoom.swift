@@ -144,42 +144,34 @@ class LinkRoom {
     private func _onQueue_clientPush(_ byte: UInt8, fromState: inout ClientState, fromChannel: Channel, toState: inout ClientState, toChannel: Channel) {
         
         switch toState {
-        case .idle(let idleByte), .unexpectedPush(let idleByte):
-            // The "to" side goes to unexpected push. Nothing sent because it isn't waiting
-            // send the idle byte to the "from" side as stale. It goes to pushed
-            let newToSideByte = byte
-            let newFromSideByte = idleByte
-            
-            fromChannel.sendLinkMessage(.pullByteStale(newFromSideByte))
-            
-            toState = .unexpectedPush(newToSideByte)
-            fromState = .pushed(byte, newFromSideByte)
+        case .idle(_):
+            // Push when the "to" side hasn't prepped a byte to exchange. Just wait
+            fromState = .pushed(byte)
             
         case .presented(let presentedByte):
             // Happy path: the "to" side has already presented, so we can do the swap normally
             let newToSideByte = byte
             let newFromSideByte = presentedByte
             
+            // Normal with "from" pushing
             toChannel.sendLinkMessage(.bytePushed(newToSideByte))
             fromChannel.sendLinkMessage(.pullByte(newFromSideByte))
             
             toState = .idle(newToSideByte)
             fromState = .idle(newFromSideByte)
             
-        case .pushed(_, let staleResponse):
+        case .pushed(let otherPushedByte):
             // The "to" side was waiting for a push response and the "from" side pushed
-            // We have a few options for how this *could* be handled
-            // Going with:
-            // - commit the stale byte on the "to" side and move it into "unexpected push"
-            // - from side gets the stale (now committed) byte back and treats it as stale itself
+            // We have a few options for how this *could* be handled but it's really a client issue
+            // Going with: complete the exchange as normal with both sides "pulling"
             let newToSideByte = byte
-            let newFromSideByte = staleResponse
+            let newFromSideByte = otherPushedByte
             
-            toChannel.sendLinkMessage(.commitStaleByte)
-            fromChannel.sendLinkMessage(.pullByteStale(newFromSideByte))
+            toChannel.sendLinkMessage(.pullByte(newToSideByte))
+            fromChannel.sendLinkMessage(.pullByte(newFromSideByte))
             
-            toState = .unexpectedPush(newToSideByte)
-            fromState = .pushed(byte, newFromSideByte)
+            toState = .idle(newToSideByte)
+            fromState = .idle(newFromSideByte)
         }
     }
     
@@ -211,15 +203,16 @@ class LinkRoom {
     private func _onQueue_clientPresent(_ byte: UInt8, fromState: inout ClientState, fromChannel: Channel, toState: inout ClientState, toChannel: Channel) {
         
         switch toState {
-        case .idle(_), .unexpectedPush(_), .presented(_):
+        case .idle(_), .presented(_):
             // Other side isn't trying to do anything, so just sit here
             fromState = .presented(byte)
-        case .pushed(let pushedByte, _):
+        case .pushed(let pushedByte):
             // Other side pushed ahead of this presentation. Send them the new byte and push back to us
             // Assume that this is the happy path with a slight timing offset and do a normal exchange
             let newToSideByte = byte
             let newFromSideByte = pushedByte
             
+            // Normal with "to" pushing
             toChannel.sendLinkMessage(.pullByte(byte))
             fromChannel.sendLinkMessage(.bytePushed(newFromSideByte))
             
@@ -266,16 +259,11 @@ class LinkRoom {
         /// Not waiting for anything to happen with argument byte in register
         case idle(UInt8)
         
-        /// The given byte was unexpectedly pushed to this client
-        /// If the client subsequently presents, treat it as that push succeeding
-        case unexpectedPush(UInt8)
-        
         /// Client has presented the given byte for pull and is waiting for the other client to push
         case presented(UInt8)
         
         /// Client has pushed the given byte (first arg) and the other client didn't have a byte presented
-        /// Indicates that this client is waiting with a stale received byte (second arg)
-        case pushed(UInt8, UInt8)
+        case pushed(UInt8)
     }
 }
 
