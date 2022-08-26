@@ -49,8 +49,6 @@ struct CloseRoomCommand: ServerJSONCommand {
             return "Successfully closed room"
         } catch LinkRoomError.roomNotFound {
             errorMessage = "User is not in any rooms"
-        } catch LinkRoomError.mustBeRoomOwner {
-            errorMessage = "Only room owners may close rooms"
         }
         
         // If we get here, we caught an error

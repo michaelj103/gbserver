@@ -240,7 +240,8 @@ class LinkRoom {
     }
     
     enum RoomCloseReason {
-        case userRequest
+        case ownerRequest
+        case participantRequest
         case inactive
         case error(Error)
     }

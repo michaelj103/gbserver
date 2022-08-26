@@ -101,6 +101,9 @@ final class HTTPRequestHandler: ChannelInboundHandler {
             } catch ServerJSONCommandError.decodeError(let underlyingError) {
                 print("Command decode error \(underlyingError)")
                 _sendEmptyStatus(context: context, status: .badRequest)
+            } catch RequestError.commandError(let message) {
+                print("Immediate request error: \(message ?? "")")
+                _sendMessageStatus(context: context, status: .badRequest, customMessage: message)
             } catch {
                 // Not sure what could have gone wrong at this layer. Command should know (and have already logged)
                 print("Command-specific error occurred for \"\(commandString)\": \(error)")

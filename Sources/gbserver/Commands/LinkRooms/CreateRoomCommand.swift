@@ -20,6 +20,9 @@ struct CreateRoomCommand: ServerJSONCommand {
     
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         let payload = try self.decodePayload(type: CreateRoomHTTPRequestPayload.self, data: data, decoder: decoder)
+        if let clientVersion = payload.clientInfo?.clientVersion, clientVersion < 2 {
+            throw HTTPRequestHandler.RequestError.commandError("Unsupported client API version")
+        }
         let sharedManager = LinkRoomManager.sharedManager
         
         let responseFuture = context.db.asyncRead(eventLoop: context.eventLoop) { dbConnection -> Int64 in

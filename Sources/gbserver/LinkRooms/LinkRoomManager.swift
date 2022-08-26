@@ -102,12 +102,13 @@ class LinkRoomManager {
             throw LinkRoomError.roomNotFound
         }
         
-        guard room.ownerID == userID else {
-            // Only the owner can request room closure
-            throw LinkRoomError.mustBeRoomOwner
+        if room.ownerID == userID {
+            room.close(.ownerRequest)
+        } else if room.participantID == userID {
+            room.close(.participantRequest)
+        } else {
+            throw LinkRoomError.invalidActiveRoomState
         }
-        
-        room.close(.userRequest)
     }
     
     private func _onQueue_roomDidClose(_ room: LinkRoom) {
@@ -270,7 +271,7 @@ enum LinkRoomError: Error {
     case roomNotFound
     case roomExpired
     case incorrectParticipant
-    case mustBeRoomOwner
+    case invalidActiveRoomState
 }
 
 
