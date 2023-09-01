@@ -37,7 +37,7 @@ public class LinkClientSession {
         sessionID = UUID()
     }
     
-    private var connectionLock = Lock()
+    private var connectionLock = NIOLock()
     private var pendingConnection: LinkClientConnection? = nil
     private func getConnection() -> LinkClientConnection? {
         connectionLock.withLock {

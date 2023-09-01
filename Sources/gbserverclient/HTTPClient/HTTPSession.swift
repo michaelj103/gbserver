@@ -37,7 +37,7 @@ class HTTPSession {
         self.port = port
     }
     
-    private var connectionLock = Lock()
+    private var connectionLock = NIOLock()
     private var pendingConnection: HTTPConnection? = nil
     private func getConnection() -> HTTPConnection? {
         connectionLock.withLock {
