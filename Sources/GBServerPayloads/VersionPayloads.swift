@@ -48,6 +48,14 @@ public typealias VersionXPCRequestPayload = CurrentVersionHTTPRequestPayload
 public typealias VersionXPCResponsePayload = CurrentVersionHTTPResponsePayload
 public typealias AddVersionXPCRequestPayload = CurrentVersionHTTPResponsePayload
 
+public struct PromoteVersionXPCRequestPayload : Codable {
+    public let name: String?
+    
+    public init(name: String?) {
+        self.name = name
+    }
+}
+
 public enum VersionType: Int64, Codable, CustomStringConvertible {
     case legacy = 0
     case current = 1

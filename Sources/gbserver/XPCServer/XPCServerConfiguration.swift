@@ -24,6 +24,7 @@ struct XPCServerConfiguration {
         let commandCenter = ServerJSONCommandCenter()
         commandCenter.registerCommand(CurrentVersionCommand())
         commandCenter.registerCommand(AddVersionCommand())
+        commandCenter.registerCommand(PromoteVersionCommand())
         commandCenter.registerCommand(ListUsersCommand())
         commandCenter.registerCommand(RegisterUserLegacyCommand())
         commandCenter.registerCommand(UpdateUserCommand())

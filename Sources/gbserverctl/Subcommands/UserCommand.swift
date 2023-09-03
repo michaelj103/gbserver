@@ -104,24 +104,10 @@ fileprivate extension GBServerCTL.UserCommand {
             try connection.sendRequest(request) { result in
                 switch result {
                 case .success(let data):
-                    Register._printResult(data)
+                    GBServerCTL.printGenericResponse(data)
                 case .failure(let error):
                     print("register failed with error: \(error)")
                 }
-            }
-        }
-        
-        static private func _printResult(_ data: Data) {
-            guard let result = try? JSONDecoder().decode(GenericMessageResponse.self, from: data) else {
-                print("Unable to decode response from server")
-                return
-            }
-            
-            switch result {
-            case .success(let message):
-                print("Received success with message: \(message)")
-            case .failure(let message):
-                print("Received failure with message: \(message)")
             }
         }
         
@@ -185,24 +171,10 @@ fileprivate extension GBServerCTL.UserCommand {
             try connection.sendRequest(request) { result in
                 switch result {
                 case .success(let data):
-                    Update._printResult(data)
+                    GBServerCTL.printGenericResponse(data)
                 case .failure(let error):
                     print("update failed with error: \(error)")
                 }
-            }
-        }
-        
-        static private func _printResult(_ data: Data) {
-            guard let result = try? JSONDecoder().decode(GenericMessageResponse.self, from: data) else {
-                print("Unable to decode response from server")
-                return
-            }
-            
-            switch result {
-            case .success(let message):
-                print("Received success with message: \(message)")
-            case .failure(let message):
-                print("Received failure with message: \(message)")
             }
         }
         
@@ -246,24 +218,10 @@ fileprivate extension GBServerCTL.UserCommand {
             try connection.sendRequest(request) { result in
                 switch result {
                 case .success(let data):
-                    Delete._printResult(data)
+                    GBServerCTL.printGenericResponse(data)
                 case .failure(let error):
                     print("register failed with error: \(error)")
                 }
-            }
-        }
-        
-        static private func _printResult(_ data: Data) {
-            guard let result = try? JSONDecoder().decode(GenericMessageResponse.self, from: data) else {
-                print("Unable to decode response from server")
-                return
-            }
-            
-            switch result {
-            case .success(let message):
-                print("Received success with message: \(message)")
-            case .failure(let message):
-                print("Received failure with message: \(message)")
             }
         }
         

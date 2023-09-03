@@ -44,25 +44,10 @@ fileprivate extension GBServerCTL.CheckInCommand {
             try connection.sendRequest(request) { result in
                 switch result {
                 case .success(let data):
-                    List._printResult(data)
+                    GBServerCTL.printGenericResponse(data)
                 case .failure(let error):
                     print("list failed with error: \(error)")
                 }
-            }
-        }
-        
-        static private func _printResult(_ data: Data) {
-            if let result = try? JSONDecoder().decode(ListCheckInsXPCResponsePayload.self, from: data) {
-                let count = result.checkIns.count
-                print("Found \(count) checkin", terminator: count == 1 ? "\n" : "s\n")
-                for checkIn in result.checkIns {
-                    print("Date: \(checkIn.date) - \(checkIn.version)")
-                }
-                
-            } else if let result = try? JSONDecoder().decode(GenericMessageResponse.self, from: data) {
-                print("Message from server: \(result.getMessage())")
-            } else {
-                print("Unable to decode response from server")
             }
         }
         
@@ -95,20 +80,11 @@ fileprivate extension GBServerCTL.CheckInCommand {
             try connection.sendRequest(request) { result in
                 switch result {
                 case .success(let data):
-                    Make._printResult(data)
+                    GBServerCTL.printGenericResponse(data)
                 case .failure(let error):
                     print("make failed with error: \(error)")
                 }
             }
-        }
-        
-        static private func _printResult(_ data: Data) {
-            guard let result = try? JSONDecoder().decode(GenericMessageResponse.self, from: data) else {
-                print("Unable to decode response from server")
-                return
-            }
-            
-            print(result.getMessage())
         }
         
         private struct MakeXPCRequest: XPCRequest {

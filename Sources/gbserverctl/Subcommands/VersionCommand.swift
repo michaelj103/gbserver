@@ -13,13 +13,17 @@ extension GBServerCTL {
     struct VersionCommand: ParsableCommand {
         static var configuration = CommandConfiguration(
             commandName: "version",
-            subcommands: [List.self, Add.self]
+            abstract: "View and manipulate application version numbers",
+            subcommands: [List.self, Add.self, Promote.self]
         )
     }
 }
 
 fileprivate extension GBServerCTL.VersionCommand {
     struct List: ParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Display version numbers for various types"
+        )
         
         @Option(name: .shortAndLong, help: "The type of versions to list")
         var type: VersionTypeArgument = .current
@@ -70,6 +74,10 @@ fileprivate extension GBServerCTL.VersionCommand {
 
 fileprivate extension GBServerCTL.VersionCommand {
     struct Add: ParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Add new versions"
+        )
+        
         @Option(name: .shortAndLong, help: "Build number of the entry to add. Must be unique.")
         var build: Int
         
@@ -87,26 +95,11 @@ fileprivate extension GBServerCTL.VersionCommand {
             try connection.sendRequest(request, responseHandler: { result in
                 switch result {
                 case .success(let data):
-                    Add._printResult(data)
+                    GBServerCTL.printGenericResponse(data)
                 case .failure(let error):
                     print("add failed with error: \(error)")
                 }
             })
-        }
-        
-        static func _printResult(_ data: Data) {
-            let decoder = JSONDecoder()
-            guard let result = try? decoder.decode(GenericMessageResponse.self, from: data) else {
-                print("Unable to decode response from server")
-                return
-            }
-            
-            switch result {
-            case .success(let message):
-                print("Succeeded with message: \(message)")
-            case .failure(let message):
-                print("Failed with message: \(message)")
-            }
         }
         
         private struct AddXPCRequest: XPCRequest {
@@ -115,6 +108,41 @@ fileprivate extension GBServerCTL.VersionCommand {
             
             init(build: Int, name: String, type: VersionType) {
                 payload = AddVersionXPCRequestPayload(build: Int64(build), versionName: name, type: type)
+            }
+        }
+    }
+}
+
+fileprivate extension GBServerCTL.VersionCommand {
+    struct Promote: ParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Promote the current staging version to current"
+        )
+        
+        @Option(name: .shortAndLong, help: "Optional new name of the version once it's current. Must be unique.")
+        var name: String?
+        
+        mutating func run() throws {
+            let connectionManager = XPCConnectionManager()
+            let connection = try connectionManager.makeConnection()
+            
+            let request = PromoteXPCRequest(newName: name)
+            try connection.sendRequest(request, responseHandler: { result in
+                switch result {
+                case .success(let data):
+                    GBServerCTL.printGenericResponse(data)
+                case .failure(let error):
+                    print("Promotion failed with error: \(error)")
+                }
+            })
+        }
+        
+        private struct PromoteXPCRequest: XPCRequest {
+            let name = "promoteVersion"
+            let payload: PromoteVersionXPCRequestPayload
+            
+            init(newName: String?) {
+                payload = PromoteVersionXPCRequestPayload(name: newName)
             }
         }
     }

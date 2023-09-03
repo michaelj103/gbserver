@@ -72,14 +72,21 @@ struct VersionModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable, Datab
     typealias UpdateRecord = VersionUpdate
     struct VersionUpdate {
         let type: VersionType
-        init(_ t: VersionType) {
-            type = t
+        let name: String?
+        init(_ type: VersionType, name: String? = nil) {
+            self.type = type
+            self.name = name
         }
     }
     
     static func update(_ db: Connection, query: QueryBuilder<VersionModel>, record: VersionUpdate) throws -> Int {
+        var setters: [Setter] = [type <- record.type.rawValue]
+        if let name = record.name {
+            setters.append(versionName <- name)
+        }
+        
         let updateTable = query.query
-        let update = updateTable.update(type <- record.type.rawValue)
+        let update = updateTable.update(setters)
         let updatedRows = try db.run(update)
         return updatedRows
     }
