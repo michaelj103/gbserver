@@ -17,7 +17,6 @@ struct HTTPServerConfiguration {
         // First, configure the commands that the server responds to
         let commandCenter = ServerJSONCommandCenter()
         commandCenter.registerCommand(CurrentVersionCommand())
-        commandCenter.registerCommand(RegisterUserLegacyCommand())
         commandCenter.registerCommand(RegisterUserCommand())
         commandCenter.registerCommand(CheckInCommand())
         commandCenter.registerCommand(UserGetDebugAuthCommand())
