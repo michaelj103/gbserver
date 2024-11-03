@@ -16,10 +16,10 @@ struct CheckInModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable, Datab
     let userID: Int64
     
     static let table = Table("CheckIn")
-    static let id = Expression<Int64>("id")
-    static let date = Expression<Date>("date")
-    static let version = Expression<String>("version")
-    static let userID = Expression<Int64>("userID")
+    static let id = SQLite.Expression<Int64>("id")
+    static let date = SQLite.Expression<Date>("date")
+    static let version = SQLite.Expression<String>("version")
+    static let userID = SQLite.Expression<Int64>("userID")
     
     private static let defaultVersion = "legacy"
     
