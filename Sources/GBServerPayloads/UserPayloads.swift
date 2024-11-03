@@ -51,7 +51,7 @@ public struct ListUsersXPCResponsePayload: Codable {
     }
 }
 
-public struct RegisterUserLegacyHTTPRequestPayload: Codable {
+public struct RegisterUserLegacyHTTPRequestPayload: Codable, Sendable {
     public let deviceID: String
     public let displayName: String?
     
@@ -67,7 +67,7 @@ public struct RegisterUserLegacyHTTPRequestPayload: Codable {
 
 public typealias RegisterUserLegacyXPCRequestPayload = RegisterUserLegacyHTTPRequestPayload
 
-public struct RegisterUserHTTPRequestPayload: Codable {
+public struct RegisterUserHTTPRequestPayload: Codable, Sendable {
     public let apiKey: String
     public let displayName: String?
     
@@ -88,7 +88,7 @@ public struct RegisterUserHTTPResponsePayload: Codable {
     }
 }
 
-public struct UpdateUserXPCRequestPayload: Codable {
+public struct UpdateUserXPCRequestPayload: Codable, Sendable {
     // immutable properties
     public let deviceID: String
     
@@ -158,7 +158,7 @@ public struct ListCheckInsXPCResponsePayload: Codable {
     }
 }
 
-public struct UserGetDebugAuthHTTPRequestPayload: QueryDecodable {
+public struct UserGetDebugAuthHTTPRequestPayload: QueryDecodable, Sendable {
     public let deviceID: String
     
     public init(query: [String : String]) throws {
@@ -177,7 +177,7 @@ public struct UserGetDebugAuthHTTPResponsePayload: Codable {
     }
 }
 
-public struct VerifyUserHTTPRequestPayload: QueryDecodable {
+public struct VerifyUserHTTPRequestPayload: QueryDecodable, Sendable {
     public let deviceID: String
     
     public init(query: [String : String]) throws {
@@ -189,12 +189,12 @@ public struct VerifyUserHTTPRequestPayload: QueryDecodable {
     }
 }
 
-public enum VerifyUserHTTPResponsePayload: Codable {
+public enum VerifyUserHTTPResponsePayload: Codable, Sendable {
     case userExists
     case userDoesNotExist
 }
 
-public struct DeleteUserXPCRequestPayload: Codable {
+public struct DeleteUserXPCRequestPayload: Codable, Sendable {
     public let deviceID: String
     public init(deviceID: String) {
         self.deviceID = deviceID

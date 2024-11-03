@@ -9,7 +9,7 @@ import Foundation
 import NIOCore
 import GBLinkServerProtocol
 
-class LinkRoom {
+final class LinkRoom: @unchecked Sendable {
     let roomID: Int
     let roomCode: String
     let ownerID: Int64

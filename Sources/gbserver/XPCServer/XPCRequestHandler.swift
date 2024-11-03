@@ -8,7 +8,7 @@
 import NIOCore
 import Foundation
 
-final class XPCRequestHandler: ChannelInboundHandler {
+final class XPCRequestHandler: ChannelInboundHandler, @unchecked Sendable {
     public typealias InboundIn = XPCMessagePart
     public typealias OutboundOut = ByteBuffer
     

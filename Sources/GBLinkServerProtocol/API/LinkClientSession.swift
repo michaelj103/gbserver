@@ -10,7 +10,7 @@ import NIOCore
 import NIOPosix
 import NIOConcurrencyHelpers
 
-public class LinkClientSession {
+public final class LinkClientSession: @unchecked Sendable {
     private let threadGroup: MultiThreadedEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     lazy private var bootstrap: ClientBootstrap = {
         ClientBootstrap(group: threadGroup)
@@ -37,7 +37,7 @@ public class LinkClientSession {
         sessionID = UUID()
     }
     
-    private var connectionLock = NIOLock()
+    private let connectionLock = NIOLock()
     private var pendingConnection: LinkClientConnection? = nil
     private func getConnection() -> LinkClientConnection? {
         connectionLock.withLock {
@@ -69,13 +69,18 @@ public class LinkClientSession {
     
     // MARK: - Keep alive
     
-    private static var keepAliveSessions = [UUID: LinkClientSession]()
+    private static let keepAliveLock = NIOLock()
+    nonisolated(unsafe) private static var keepAliveSessions = [UUID: LinkClientSession]()
     public func keepAlive() {
-        LinkClientSession.keepAliveSessions[sessionID] = self
+        Self.keepAliveLock.withLockVoid {
+            Self.keepAliveSessions[sessionID] = self
+        }
     }
     
     public func stopKeepAlive() {
-        LinkClientSession.keepAliveSessions[sessionID] = nil
+        Self.keepAliveLock.withLockVoid {
+            Self.keepAliveSessions[sessionID] = nil
+        }
     }
     
     private enum SessionError: Error {
@@ -86,7 +91,7 @@ public class LinkClientSession {
 
 // MARK: - Connection -
 
-public class LinkClientConnection {
+public final class LinkClientConnection: @unchecked Sendable {
     private(set) var channel: Channel!
     private let queue = DispatchQueue(label: "LinkClientConnectionQueue")
     

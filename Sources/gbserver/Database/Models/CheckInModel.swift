@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import SQLite
+@preconcurrency import SQLite
 import GBServerPayloads
 
 struct CheckInModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable, DatabaseDeletable {
@@ -16,10 +16,10 @@ struct CheckInModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable, Datab
     let userID: Int64
     
     static let table = Table("CheckIn")
-    static let id = Expression<Int64>("id")
-    static let date = Expression<Date>("date")
-    static let version = Expression<String>("version")
-    static let userID = Expression<Int64>("userID")
+    static let id = Expression<Int64>(value: "id")
+    static let date = Expression<Date>(value: "date")
+    static let version = Expression<String>(value: "version")
+    static let userID = Expression<Int64>(value: "userID")
     
     private static let defaultVersion = "legacy"
     

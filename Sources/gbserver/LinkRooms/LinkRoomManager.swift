@@ -9,7 +9,7 @@ import Foundation
 import GBServerPayloads
 import NIOCore
 
-class LinkRoomManager {
+final class LinkRoomManager: @unchecked Sendable {
     static let sharedManager = LinkRoomManager()
     
     private let queue = DispatchQueue(label: "LinkRoomManager")
@@ -26,7 +26,7 @@ class LinkRoomManager {
     private var listeningPort: Int?
     private var nioState = LinkRoomManagerNIOState()
     
-    func runBlock(_ block: @escaping (LinkRoomManager) -> Void) {
+    func runBlock(_ block: @Sendable @escaping (LinkRoomManager) -> Void) {
         queue.async {
             block(self)
         }
@@ -282,7 +282,7 @@ extension LinkRoomManager {
         var roomCleanupTask: RepeatedTask?
     }
     
-    func runBlock<T>(eventLoop: NIOCore.EventLoop, block: @escaping (LinkRoomManager) throws -> T) -> EventLoopFuture<T> {
+    func runBlock<T: Sendable>(eventLoop: NIOCore.EventLoop, block: @Sendable @escaping (LinkRoomManager) throws -> T) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
         runBlock { manager in
             do {

@@ -5,7 +5,7 @@
 //  Created by Michael Brandt on 8/3/22.
 //
 
-public struct CurrentVersionHTTPRequestPayload: Codable, QueryDecodable {
+public struct CurrentVersionHTTPRequestPayload: Codable, Sendable, QueryDecodable {
     public let requestedType: VersionType?
     
     public let clientInfo: ClientInfo?
@@ -32,7 +32,7 @@ public struct CurrentVersionHTTPRequestPayload: Codable, QueryDecodable {
     }
 }
 
-public struct CurrentVersionHTTPResponsePayload : Codable {
+public struct CurrentVersionHTTPResponsePayload : Codable, Sendable {
     public let build: Int64
     public let versionName: String
     public let type: VersionType
@@ -48,7 +48,7 @@ public typealias VersionXPCRequestPayload = CurrentVersionHTTPRequestPayload
 public typealias VersionXPCResponsePayload = CurrentVersionHTTPResponsePayload
 public typealias AddVersionXPCRequestPayload = CurrentVersionHTTPResponsePayload
 
-public struct PromoteVersionXPCRequestPayload : Codable {
+public struct PromoteVersionXPCRequestPayload : Codable, Sendable {
     public let name: String?
     
     public init(name: String?) {
@@ -56,7 +56,7 @@ public struct PromoteVersionXPCRequestPayload : Codable {
     }
 }
 
-public enum VersionType: Int64, Codable, CustomStringConvertible {
+public enum VersionType: Int64, Codable, Sendable, CustomStringConvertible {
     case legacy = 0
     case current = 1
     case staging = 2

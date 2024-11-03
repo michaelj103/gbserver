@@ -10,7 +10,7 @@ import NIOCore
 import NIOPosix
 import GBLinkServerProtocol
 
-class LinkServerRequestHandler: ChannelInboundHandler {
+class LinkServerRequestHandler: ChannelInboundHandler, @unchecked Sendable {
     public typealias InboundIn = LinkServerMessage
     public typealias OutboundOut = ByteBuffer
     

@@ -12,7 +12,7 @@ import Foundation
 
 import Dispatch
 
-final class HTTPRequestHandler: ChannelInboundHandler {
+final class HTTPRequestHandler: ChannelInboundHandler, @unchecked Sendable {
     typealias InboundIn = HTTPServerRequestPart
     typealias OutboundOut = HTTPServerResponsePart
     

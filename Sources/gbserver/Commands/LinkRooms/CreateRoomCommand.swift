@@ -12,11 +12,7 @@ import SQLite
 
 struct CreateRoomCommand: ServerJSONCommand {
     let name = "createRoom"
-    
-    private static var RequireAuth = true
-    static func setRequireAuth(_ require: Bool) {
-        RequireAuth = require
-    }
+    let requireAuth: Bool
     
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         let payload = try self.decodePayload(type: CreateRoomHTTPRequestPayload.self, data: data, decoder: decoder)
@@ -30,7 +26,7 @@ struct CreateRoomCommand: ServerJSONCommand {
             guard let user = try UserModel.fetch(dbConnection, queryBuilder: userQuery).first else {
                 throw HTTPRequestHandler.RequestError.commandError("User not found")
             }
-            if CreateRoomCommand.RequireAuth && !user.createRoomAuthorized {
+            if requireAuth && !user.createRoomAuthorized {
                 throw HTTPRequestHandler.RequestError.commandError("User isn't authorized to create rooms")
             }
             

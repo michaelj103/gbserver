@@ -5,10 +5,10 @@
 //  Created by Michael Brandt on 8/1/22.
 //
 
-import SQLite
+@preconcurrency import SQLite
 import Dispatch
 
-class DatabaseManager {
+class DatabaseManager: @unchecked Sendable {
     private let db: Connection
     private let queue: DispatchQueue
     private let tables: [DatabaseTable.Type]
@@ -89,7 +89,7 @@ class DatabaseManager {
         return result!
     }
     
-    func asyncWrite<T>(_ updates: @escaping (Connection) throws -> T, completion: @escaping (Swift.Result<T,Error>) -> Void) {
+    func asyncWrite<T>(_ updates: @Sendable @escaping (Connection) throws -> T, completion: @Sendable @escaping (Swift.Result<T,Error>) -> Void) {
         let db = self.db
         queue.async {
             do {
@@ -119,7 +119,7 @@ class DatabaseManager {
         return result!
     }
     
-    func asyncRead<T>(_ value: @escaping (Connection) throws -> T, completion: @escaping (Swift.Result<T,Error>) -> Void) {
+    func asyncRead<T>(_ value: @Sendable @escaping (Connection) throws -> T, completion: @Sendable @escaping (Swift.Result<T,Error>) -> Void) {
         let db = self.db
         queue.async {
             do {

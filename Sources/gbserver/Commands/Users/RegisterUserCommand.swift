@@ -12,18 +12,14 @@ import SQLite
 
 struct RegisterUserCommand: ServerJSONCommand {
     let name = "registerUser2"
+    let registrationAPIKey: String?
     
     private static let TotalAllowedUsers = 20 // For now. Stop registering users if we exceed this because something is up
-    
-    private static var RegistrationAPIKey: String? = nil
-    static func setAPIKey(_ key: String) {
-        RegistrationAPIKey = key
-    }
     
     func run(with data: Data, decoder: JSONDecoder, context: ServerCommandContext) throws -> EventLoopFuture<Data> {
         let payload = try self.decodePayload(type: RegisterUserHTTPRequestPayload.self, data: data, decoder: decoder)
         
-        guard let apiKey = RegisterUserCommand.RegistrationAPIKey else {
+        guard let apiKey = registrationAPIKey else {
             throw RegistrationError.missingAPIKey
         }
         if apiKey != payload.apiKey {

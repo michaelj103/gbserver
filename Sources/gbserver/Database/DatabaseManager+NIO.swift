@@ -9,7 +9,7 @@ import NIOCore
 import SQLite
 
 extension DatabaseManager {
-    func asyncWrite<T>(eventLoop: NIOCore.EventLoop, updates: @escaping (Connection) throws -> T) -> EventLoopFuture<T> {
+    func asyncWrite<T: Sendable>(eventLoop: NIOCore.EventLoop, updates: @Sendable @escaping (Connection) throws -> T) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
         asyncWrite(updates) { result in
             switch result {
@@ -22,7 +22,7 @@ extension DatabaseManager {
         return promise.futureResult
     }
     
-    func asyncRead<T>(eventLoop: NIOCore.EventLoop, value: @escaping (Connection) throws -> T) -> EventLoopFuture<T> {
+    func asyncRead<T: Sendable>(eventLoop: NIOCore.EventLoop, value: @Sendable @escaping (Connection) throws -> T) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
         asyncRead(value) { result in
             switch result {

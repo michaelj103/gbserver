@@ -5,7 +5,7 @@
 //  Created by Michael Brandt on 8/7/22.
 //
 
-public struct ClientInfo: Codable {
+public struct ClientInfo: Codable, Sendable {
     private static let currentAPIVersion = 2
     
     // Client version is mainly there to restrict functionality to shipped clients above a certain version

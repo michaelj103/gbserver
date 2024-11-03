@@ -8,7 +8,7 @@
 import NIOCore
 
 // Decoded messages passed along the pipeline for processing
-public enum LinkClientMessage {
+public enum LinkClientMessage: Sendable {
     case didConnect
     case pullByte(UInt8)
     case pullByteStale(UInt8)

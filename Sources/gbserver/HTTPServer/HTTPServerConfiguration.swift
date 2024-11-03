@@ -12,16 +12,18 @@ import NIOPosix
 struct HTTPServerConfiguration {
     let host: String
     let port: Int
+    let registrationAPIKey: String?
+    let requireAuth: Bool
     
     func startHTTPServer(threadGroup: MultiThreadedEventLoopGroup, database: DatabaseManager) throws -> EventLoopFuture<Void> {
         // First, configure the commands that the server responds to
         let commandCenter = ServerJSONCommandCenter()
         commandCenter.registerCommand(CurrentVersionCommand())
-        commandCenter.registerCommand(RegisterUserCommand())
+        commandCenter.registerCommand(RegisterUserCommand(registrationAPIKey: self.registrationAPIKey))
         commandCenter.registerCommand(CheckInCommand())
         commandCenter.registerCommand(UserGetDebugAuthCommand())
         commandCenter.registerCommand(VerifyUserCommand())
-        commandCenter.registerCommand(CreateRoomCommand())
+        commandCenter.registerCommand(CreateRoomCommand(requireAuth: self.requireAuth))
         commandCenter.registerCommand(JoinRoomCommand())
         commandCenter.registerCommand(CloseRoomCommand())
         commandCenter.registerCommand(GetRoomInfoCommand())

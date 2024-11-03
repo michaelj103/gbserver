@@ -20,7 +20,7 @@ enum ServerJSONCommandError: Swift.Error {
     case decodeError(underlyingError: Error)
 }
 
-class ServerJSONCommandCenter {
+class ServerJSONCommandCenter: @unchecked Sendable {
     private var registeredCommands = [String:ServerJSONCommand]()
     private let decoder = JSONDecoder()
     

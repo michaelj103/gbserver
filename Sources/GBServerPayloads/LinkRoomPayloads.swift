@@ -8,7 +8,7 @@
 // MARK: - Requests
 
 /// Request payload for creating a room. Successful response is LinkRoomClientInfo
-public struct CreateRoomHTTPRequestPayload: Codable {
+public struct CreateRoomHTTPRequestPayload: Codable, Sendable {
     public let deviceID: String
     
     public let clientInfo: ClientInfo?
@@ -21,7 +21,7 @@ public struct CreateRoomHTTPRequestPayload: Codable {
 }
 
 /// Request payload for closing a room that you created. Successful response is GenericMessageResponse
-public struct CloseRoomHTTPRequestPayload: Codable {
+public struct CloseRoomHTTPRequestPayload: Codable, Sendable {
     public let deviceID: String
     
     public let clientInfo: ClientInfo?
@@ -34,7 +34,7 @@ public struct CloseRoomHTTPRequestPayload: Codable {
 }
 
 /// Request payload for joining a room that a different user created using a join code. Successful response is LinkRoomClientInfo
-public struct JoinRoomHTTPRequestPayload: Codable {
+public struct JoinRoomHTTPRequestPayload: Codable, Sendable {
     public let deviceID: String
     public let roomCode: String
     
@@ -49,7 +49,7 @@ public struct JoinRoomHTTPRequestPayload: Codable {
 }
 
 /// Request payload for getting a room that a user is currently a member of, if any. Successful response is PossibleLinkRoomClientInfo
-public struct GetRoomInfoHTTPRequestPayload: Codable, QueryDecodable {
+public struct GetRoomInfoHTTPRequestPayload: Codable, QueryDecodable, Sendable {
     public let deviceID: String
     
     public let clientInfo: ClientInfo?
@@ -72,7 +72,7 @@ public struct GetRoomInfoHTTPRequestPayload: Codable, QueryDecodable {
 
 // MARK: - Responses
 
-public enum LinkRoomKey: Codable {
+public enum LinkRoomKey: Codable, Sendable {
     case owner(String)
     case participant(String)
     
@@ -86,7 +86,7 @@ public enum LinkRoomKey: Codable {
     }
 }
 
-public struct LinkRoomClientInfo: Codable {
+public struct LinkRoomClientInfo: Codable, Sendable {
     public let roomID: Int
     public let roomCode: String
     public let roomKey: LinkRoomKey
@@ -100,7 +100,7 @@ public struct LinkRoomClientInfo: Codable {
     }
 }
 
-public enum PossibleLinkRoomClientInfo: Codable {
+public enum PossibleLinkRoomClientInfo: Codable, Sendable {
     case isInRoom(LinkRoomClientInfo)
     case isNotInRoom
 }

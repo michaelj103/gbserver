@@ -14,7 +14,7 @@ import ArgumentParser
 
 @main
 struct GBServer: ParsableCommand {
-    static var configuration = CommandConfiguration(commandName: "gbserver")
+    static let configuration = CommandConfiguration(commandName: "gbserver")
     
     @Option(name: .shortAndLong, help: "Host to bind to for listening. Defaults to \"localhost\"")
     var host: String = "0.0.0.0"
@@ -35,23 +35,19 @@ struct GBServer: ParsableCommand {
     var noCheckRooms: Bool = false
         
     mutating func run() throws {
+        if key == nil {
+            print("User registration is disabled (no key)")
+        }
+        
         let database = try _setupDatabase()
         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
-        let httpServerConfig = HTTPServerConfiguration(host: host, port: port)
+        let httpServerConfig = HTTPServerConfiguration(host: host, port: port, registrationAPIKey: key, requireAuth: !noCheckRooms)
         let serverCloseFuture = try httpServerConfig.startHTTPServer(threadGroup: group, database: database)
         let xpcServerConfig = XPCServerConfiguration(socketPath: "/tmp/com.mjb.gbserver")
         let xpcCloseFuture = try xpcServerConfig.startXPCServer(threadGroup: group, database: database)
         let linkServerConfig = LinkServerConfiguration(host: host, port: linkPort)
         let linkServerCloseFuture = try linkServerConfig.startLinkServer(threadGroup: group)
-        
-        if let key = key {
-            RegisterUserCommand.setAPIKey(key)
-        } else {
-            print("User registration is disabled (no key)")
-        }
-        
-        CreateRoomCommand.setRequireAuth(!noCheckRooms)
-        
+                
         // When the server channels close, try to shut down gracefully. Doesn't matter if we crash since
         // we're exiting anyway. This won't ever actually happen since we currently have no exit conditions
         serverCloseFuture.and(xpcCloseFuture).and(linkServerCloseFuture).whenComplete { _ in

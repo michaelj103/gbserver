@@ -5,7 +5,7 @@
 //  Created by Michael Brandt on 8/1/22.
 //
 
-import SQLite
+@preconcurrency import SQLite
 import GBServerPayloads
 
 struct VersionModel: DatabaseTable, DatabaseInsertable, DatabaseFetchable, DatabaseUpdatable {
